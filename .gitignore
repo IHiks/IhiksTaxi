@@ -1,0 +1,48 @@
+## .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+
+## Visual Studio
+.vs/
+.vsconfig
+*.userosscache
+*.sln.docstates
+TestResults/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.pdb
+*.dll
+*.exe
+*.msi
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nupkg
+*.snupkg
+*.apphost
+*.cache
+*.log
+
+## .NET MAUI
+*.user
+*.suo
+.idea/
+*.vscode/
+*.local/
+bin/Release/
+obj/Release/
+
+## Rider
+.idea/
+
+## Common
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+~$*.doc*
