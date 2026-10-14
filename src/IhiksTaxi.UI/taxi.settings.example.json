@@ -1,0 +1,7 @@
+{
+  "Host": "localhost",
+  "Port": 5432,
+  "Database": "IhiksTaxiCourse",
+  "Username": "postgres",
+  "Password": "укажи_свой_пароль"
+}

@@ -46,3 +46,8 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 ~$*.doc*
+
+## local config
+*.local.json
+appsettings.Development.json
+taxi.settings.json

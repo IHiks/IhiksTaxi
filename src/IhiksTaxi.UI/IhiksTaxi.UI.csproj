@@ -57,6 +57,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- локальный файл с паролем не хранится в репозитории, но копируется рядом с exe -->
+		<None Include="taxi.settings.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('taxi.settings.json')" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
@@ -64,6 +69,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\IhiksTaxi.Application\IhiksTaxi.Application.csproj" />
+	  <ProjectReference Include="..\IhiksTaxi.Infrastructure\IhiksTaxi.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>
