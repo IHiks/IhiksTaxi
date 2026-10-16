@@ -34,15 +34,32 @@ public class ProfileViewModel : ObservableObject
 
 	public bool HasHistory => History.Count > 0;
 
+	private bool _isBusy;
+	public bool IsBusy
+	{
+		get => _isBusy;
+		private set => Set(ref _isBusy, value);
+	}
+
+	public bool HasError => !string.IsNullOrWhiteSpace(StatusMessage);
+
 	private string? _statusMessage;
 	public string? StatusMessage
 	{
 		get => _statusMessage;
-		set => Set(ref _statusMessage, value);
+		set
+		{
+			if (Set(ref _statusMessage, value))
+				OnPropertyChanged(nameof(HasError));
+		}
 	}
 
 	public async Task RefreshAsync()
 	{
+		if (IsBusy)
+			return;
+
+		IsBusy = true;
 		try
 		{
 			Passenger = await _service.GetPassengerAsync(PassengerId);
@@ -58,6 +75,10 @@ public class ProfileViewModel : ObservableObject
 		catch (Exception ex)
 		{
 			StatusMessage = "Не удалось загрузить профиль. " + ErrorText.Describe(ex);
+		}
+		finally
+		{
+			IsBusy = false;
 		}
 	}
 }

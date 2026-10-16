@@ -343,6 +343,12 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("brand");
 
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("color");
+
                     b.Property<int>("DriverId")
                         .HasColumnType("integer")
                         .HasColumnName("driver_id");

@@ -46,6 +46,7 @@ public class IhiksTaxiDbContext : DbContext
 			e.Property(x => x.Brand).HasColumnName("brand").HasMaxLength(100).IsRequired();
 			e.Property(x => x.Model).HasColumnName("model").HasMaxLength(100).IsRequired();
 			e.Property(x => x.VehicleClass).HasColumnName("class").HasMaxLength(20).IsRequired();
+			e.Property(x => x.Color).HasColumnName("color").HasMaxLength(30).IsRequired();
 			e.Property(x => x.Plate).HasColumnName("plate").HasMaxLength(15).IsRequired();
 			e.Property(x => x.TariffId).HasColumnName("tariff_id").IsRequired();
 			e.HasIndex(x => x.DriverId).HasDatabaseName("Vehicle_IX_DriverId");

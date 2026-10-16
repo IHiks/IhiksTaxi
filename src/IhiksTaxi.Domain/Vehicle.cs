@@ -8,6 +8,7 @@ public class Vehicle
 	public string Model { get; set; } = null!;
 	// в БД колонка называется class, поэтому свойство VehicleClass
 	public string VehicleClass { get; set; } = null!;
+	public string Color { get; set; } = null!;
 	public string Plate { get; set; } = null!;
 	public int TariffId { get; set; }
 

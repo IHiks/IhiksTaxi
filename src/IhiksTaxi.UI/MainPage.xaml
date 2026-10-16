@@ -8,17 +8,11 @@
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- верхняя плашка с логотипом -->
-        <Grid Grid.Row="0" Padding="24,16" BackgroundColor="{StaticResource HeaderBackground}"
-              ColumnDefinitions="Auto,*">
-            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+        <Grid Grid.Row="0" Padding="24,14" BackgroundColor="{StaticResource HeaderBackground}">
+            <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="6">
                 <Label Text="IHIKS" Style="{StaticResource LogoOrange}" />
                 <Label Text="ТАКСИ" Style="{StaticResource LogoDark}" />
             </HorizontalStackLayout>
-            <Label Grid.Column="1" Text="Система заказа такси"
-                   Style="{StaticResource MutedLabel}"
-                   VerticalOptions="Center"
-                   HorizontalOptions="End"
-                   IsVisible="{Binding ShowSubtitle}" />
         </Grid>
         <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1"
                  Color="{StaticResource StrokeColor}" />
@@ -33,8 +27,12 @@
 
                 <Label Grid.Row="0" Text="Заказать поездку" Style="{StaticResource SectionTitle}" />
 
-                <Grid Grid.Row="1" RowDefinitions="Auto,*" ColumnDefinitions="*,*"
+                <Grid Grid.Row="1" RowDefinitions="Auto,*"
                       ColumnSpacing="{Binding OrderColumnSpacing}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="{Binding OrderPanelColumnWidth}" />
+                    </Grid.ColumnDefinitions>
 
                     <!-- карта видна всё время работы с заказом -->
                     <Border Grid.Row="{Binding OrderMapRow}"
@@ -65,17 +63,15 @@
                                          VerticalOptions="Start"
                                          IsVisible="{Binding Order.ShowOrderForm}">
 
-                        <!-- маршрут -->
-                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="Маршрут" Style="{StaticResource CardTitle}" />
+                        <VerticalStackLayout Spacing="8">
+                                <Label Text="Куда поедем?" Style="{StaticResource CardTitle}" />
 
                                 <!-- Откуда -->
                                 <Border Style="{StaticResource AddressRow}">
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                         <Border Grid.Column="0" Style="{StaticResource AddressMarker}"
                                                 VerticalOptions="Start" Margin="0,6,0,0">
-                                            <Label Text="А" HorizontalOptions="Center" VerticalOptions="Center"
+                                            <Label Text="A" HorizontalOptions="Center" VerticalOptions="Center"
                                                    FontAttributes="Bold" TextColor="{StaticResource BrandOrange}" />
                                         </Border>
 
@@ -147,63 +143,63 @@
                                 </Border>
                                 <Label Text="{Binding Order.ToPointStatus}" Style="{StaticResource MutedLabel}"
                                        IsVisible="{Binding Order.ToPointStatus, Converter={StaticResource IsNotEmptyConverter}}" />
-                            </VerticalStackLayout>
-                        </Border>
+                        </VerticalStackLayout>
 
-                        <!-- тариф -->
-                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="Тариф" Style="{StaticResource CardTitle}" />
+                        <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="Выберите тариф" Style="{StaticResource CardTitle}" />
+                                    <Label Grid.Column="1" Text="Базовая ставка" Style="{StaticResource MutedLabel}" />
+                                </Grid>
 
-                                <FlexLayout BindableLayout.ItemsSource="{Binding Order.TariffOptions}"
-                                            Wrap="NoWrap" AlignItems="Stretch">
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8"
+                                      BindableLayout.ItemsSource="{Binding Order.TariffOptions}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate>
-                                            <Button Text="{Binding DisplayName}"
-                                                    Command="{Binding SelectCommand}"
-                                                    Style="{StaticResource TariffButton}"
-                                                    FlexLayout.Grow="1" FlexLayout.Basis="0"
-                                                    Margin="0,0,6,0">
-                                                <Button.Triggers>
-                                                    <DataTrigger TargetType="Button"
-                                                                 Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="BackgroundColor"
-                                                                Value="{StaticResource BrandOrange}" />
-                                                        <Setter Property="TextColor"
-                                                                Value="{StaticResource White}" />
-                                                    </DataTrigger>
-                                                </Button.Triggers>
-                                            </Button>
+                                            <Grid Grid.Column="{Binding Column}" Grid.ColumnDefinitions="*">
+                                                <Border Style="{StaticResource TariffTile}">
+                                                    <VerticalStackLayout Spacing="2" HorizontalOptions="Center"
+                                                                         VerticalOptions="Center">
+                                                        <Label Text="{Binding DisplayName}" Style="{StaticResource TariffName}" />
+                                                        <Label Text="{Binding BaseCostText}" Style="{StaticResource TariffBaseCost}" />
+                                                    </VerticalStackLayout>
+                                                    <Border.Triggers>
+                                                        <DataTrigger TargetType="Border"
+                                                                     Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="BackgroundColor" Value="{StaticResource White}" />
+                                                            <Setter Property="Stroke" Value="{StaticResource BrandOrange}" />
+                                                            <Setter Property="StrokeThickness" Value="2" />
+                                                        </DataTrigger>
+                                                    </Border.Triggers>
+                                                </Border>
+                                                <Button Text=""
+                                                        Command="{Binding SelectCommand}"
+                                                        Style="{StaticResource TariffHit}" />
+                                            </Grid>
                                         </DataTemplate>
                                     </BindableLayout.ItemTemplate>
-                                </FlexLayout>
+                                </Grid>
 
-                                <Label Text="{Binding Order.SelectedTariffDetails}"
-                                       Style="{StaticResource MutedLabel}" />
-                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+
+                        <Border Style="{StaticResource EstimatePanel}">
+                            <Grid ColumnDefinitions="*,1,*">
+                                <VerticalStackLayout Grid.Column="0" Padding="14,12" Spacing="2">
+                                    <Label Text="ВРЕМЯ В ПУТИ" Style="{StaticResource FieldLabel}" />
+                                    <Label Text="{Binding Order.DurationText}" Style="{StaticResource BodyText}"
+                                           FontSize="20" FontAttributes="Bold" />
+                                    <Label Text="{Binding Order.DistanceText}" Style="{StaticResource MutedLabel}" />
+                                </VerticalStackLayout>
+                                <BoxView Grid.Column="1" Color="{StaticResource TileBorder}" />
+                                <VerticalStackLayout Grid.Column="2" Padding="14,12" Spacing="2">
+                                    <Label Text="ОЦЕНКА СТОИМОСТИ" Style="{StaticResource FieldLabel}" />
+                                    <Label Text="{Binding Order.EstimateText}" Style="{StaticResource PriceText}" />
+                                    <Label Text="{Binding Order.SelectedTariffDetails}" Style="{StaticResource MutedLabel}"
+                                           LineBreakMode="WordWrap" />
+                                </VerticalStackLayout>
+                            </Grid>
                         </Border>
 
-                        <!-- стоимость -->
-                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
-                            <VerticalStackLayout Spacing="8">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label Grid.Column="0" Text="Стоимость поездки"
-                                           Style="{StaticResource BodyText}" VerticalOptions="Center" />
-                                    <Label Grid.Column="1" Text="{Binding Order.EstimateText}"
-                                           Style="{StaticResource PriceText}" />
-                                </Grid>
-                                <Grid ColumnDefinitions="*,*">
-                                    <Label Grid.Column="0"
-                                           Text="{Binding Order.DistanceText, StringFormat='Расстояние: {0}'}"
-                                           Style="{StaticResource MutedLabel}" />
-                                    <Label Grid.Column="1"
-                                           Text="{Binding Order.DurationText, StringFormat='Время: {0}'}"
-                                           Style="{StaticResource MutedLabel}" />
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Border>
-
-                        <Button Text="Оформить заказ"
+                        <Button Text="Заказать поездку"
                                 Command="{Binding Order.CreateCommand}"
                                 IsEnabled="{Binding Order.CanCreate}"
                                 Style="{StaticResource PrimaryButton}" />
@@ -219,29 +215,70 @@
                                          Spacing="{Binding StackSpacing}"
                                          VerticalOptions="Start"
                                          IsVisible="{Binding Order.HasActiveTrip}">
-                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="Текущая поездка" Style="{StaticResource CardTitle}" />
-                                <Label Text="{Binding Order.ActiveStatusText}" FontSize="16"
-                                       FontAttributes="Bold" TextColor="{StaticResource BrandOrange}" />
+                        <Border Style="{StaticResource ActiveTripPanel}" Padding="16">
+                            <VerticalStackLayout Spacing="14">
+                                <Label Text="{Binding Order.ActiveStatusText}" FontSize="20"
+                                       FontAttributes="Bold" TextColor="{StaticResource BrandDark}" />
                                 <Label Text="{Binding Order.ActiveTariffText}" Style="{StaticResource MutedLabel}" />
-                                <Label Text="{Binding Order.ActiveRoute}" Style="{StaticResource BodyText}" />
 
-                                <BoxView HeightRequest="1" Color="{StaticResource StrokeColor}" />
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                                      IsVisible="{Binding Order.HasDriver}">
+                                    <Border Grid.Column="0" Style="{StaticResource DriverAvatar}">
+                                        <Label Text="{Binding Order.ActiveDriverInitials}" FontSize="18"
+                                               FontAttributes="Bold" TextColor="{StaticResource BrandOrange}"
+                                               HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding Order.ActiveDriverName}" FontSize="16"
+                                               FontAttributes="Bold" TextColor="{StaticResource BrandDark}"
+                                               LineBreakMode="TailTruncation" MaxLines="1" />
+                                        <Label Text="{Binding Order.ActiveDriverPhone}" Style="{StaticResource MutedLabel}" />
+                                    </VerticalStackLayout>
+                                </Grid>
 
-                                <Label Text="{Binding Order.ActiveDriver}" Style="{StaticResource BodyText}" />
-                                <Label Text="{Binding Order.ActiveVehicle}" Style="{StaticResource MutedLabel}" />
+                                <Border BackgroundColor="{StaticResource OrangeSurface}"
+                                        Stroke="{StaticResource TileBorder}" StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 12" Padding="14,12"
+                                        IsVisible="{Binding Order.HasDriver}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <Border Grid.Column="0" WidthRequest="34" HeightRequest="34"
+                                                Stroke="{StaticResource ColorDotBorder}" StrokeThickness="1"
+                                                StrokeShape="RoundRectangle 17"
+                                                BackgroundColor="{Binding Order.ActiveVehicleColorSwatch}"
+                                                VerticalOptions="Center" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="{Binding Order.ActiveVehiclePlate}"
+                                                   Style="{StaticResource VehiclePlate}" />
+                                            <Label Text="{Binding Order.ActiveVehicleColor, StringFormat='Цвет: {0}'}"
+                                                   Style="{StaticResource MutedLabel}" />
+                                            <Label Text="{Binding Order.ActiveVehicleName}" Style="{StaticResource MutedLabel}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <Label Grid.Column="0" Text="Маршрут" Style="{StaticResource FieldLabel}" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding Order.ActiveRoute}" Style="{StaticResource BodyText}"
+                                           LineBreakMode="TailTruncation" MaxLines="2" />
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="{StaticResource TileBorder}" />
 
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Grid.Column="0" Text="К оплате" Style="{StaticResource BodyText}"
                                            VerticalOptions="Center" />
                                     <Label Grid.Column="1" Text="{Binding Order.ActiveCost}"
-                                           Style="{StaticResource PriceText}" FontSize="20" />
+                                           Style="{StaticResource PriceText}" />
                                 </Grid>
                                 <Label Text="{Binding Order.RatingText}" Style="{StaticResource MutedLabel}"
                                        IsVisible="{Binding Order.RatingText, Converter={StaticResource IsNotEmptyConverter}}" />
                             </VerticalStackLayout>
                         </Border>
+
+                        <HorizontalStackLayout Spacing="8" IsVisible="{Binding Order.IsBusy}">
+                            <ActivityIndicator IsRunning="{Binding Order.IsBusy}" />
+                            <Label Text="Выполняется операция…" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
 
                         <Button Text="Найти водителя"
                                 IsVisible="{Binding Order.CanSearchDriver}"
@@ -256,17 +293,20 @@
                         <Button Text="Отменить поездку"
                                 IsVisible="{Binding Order.CanCancel}"
                                 Command="{Binding Order.CancelCommand}"
-                                Style="{StaticResource SecondaryButton}" />
+                                Style="{StaticResource DestructiveButton}" />
 
-                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}" IsVisible="{Binding Order.CanRate}">
+                        <Border Style="{StaticResource RatingPanel}" IsVisible="{Binding Order.CanRate}">
                             <VerticalStackLayout Spacing="8">
-                                <Label Text="Оцените водителя" Style="{StaticResource CardTitle}" />
+                                <Label Text="Оцените водителя" Style="{StaticResource CardTitle}"
+                                       TextColor="{StaticResource BrandOrange}" />
+                                <Label Text="Оценка сохранится сразу после выбора."
+                                       Style="{StaticResource MutedLabel}" TextColor="{StaticResource SoftOrange}" />
                                 <HorizontalStackLayout Spacing="8">
-                                    <Button Text="1" Command="{Binding Order.RateCommand}" CommandParameter="1" Style="{StaticResource SecondaryButton}" WidthRequest="52" />
-                                    <Button Text="2" Command="{Binding Order.RateCommand}" CommandParameter="2" Style="{StaticResource SecondaryButton}" WidthRequest="52" />
-                                    <Button Text="3" Command="{Binding Order.RateCommand}" CommandParameter="3" Style="{StaticResource SecondaryButton}" WidthRequest="52" />
-                                    <Button Text="4" Command="{Binding Order.RateCommand}" CommandParameter="4" Style="{StaticResource SecondaryButton}" WidthRequest="52" />
-                                    <Button Text="5" Command="{Binding Order.RateCommand}" CommandParameter="5" Style="{StaticResource SecondaryButton}" WidthRequest="52" />
+                                    <Button Text="1" Command="{Binding Order.RateCommand}" CommandParameter="1" Style="{StaticResource RatingButton}" />
+                                    <Button Text="2" Command="{Binding Order.RateCommand}" CommandParameter="2" Style="{StaticResource RatingButton}" />
+                                    <Button Text="3" Command="{Binding Order.RateCommand}" CommandParameter="3" Style="{StaticResource RatingButton}" />
+                                    <Button Text="4" Command="{Binding Order.RateCommand}" CommandParameter="4" Style="{StaticResource RatingButton}" />
+                                    <Button Text="5" Command="{Binding Order.RateCommand}" CommandParameter="5" Style="{StaticResource RatingButton}" />
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -283,49 +323,64 @@
 
             <!-- раздел «Профиль» -->
             <ScrollView IsVisible="{Binding ShowProfile}">
-                <VerticalStackLayout Margin="{Binding ContentMargin}" Spacing="16">
+                <VerticalStackLayout Margin="{Binding ContentMargin}" Spacing="18">
                     <Label Text="Профиль" Style="{StaticResource SectionTitle}" />
 
-                    <Border Style="{StaticResource Card}">
-                        <VerticalStackLayout Spacing="6">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border Style="{StaticResource ProfileAvatar}">
+                            <Label Text="{Binding Profile.Passenger.FullName, StringFormat='{0}'}"
+                                   FontSize="20" FontAttributes="Bold" TextColor="{StaticResource ActionOrange}"
+                                   HorizontalOptions="Center" VerticalOptions="Center"
+                                   LineBreakMode="TailTruncation" MaxLines="1" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding Profile.Passenger.FullName}" FontSize="18"
-                                   FontAttributes="Bold" TextColor="{StaticResource BrandDark}" />
+                                   FontAttributes="Bold" TextColor="{StaticResource BrandDark}"
+                                   LineBreakMode="TailTruncation" MaxLines="1" />
                             <Label Text="{Binding Profile.PhoneText}" Style="{StaticResource MutedLabel}" />
                             <Label Text="{Binding Profile.Passenger.TripsCount, StringFormat='Поездок всего: {0}'}"
-                                   Style="{StaticResource BodyText}" />
+                                   Style="{StaticResource MutedLabel}" />
                         </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="История поездок" Style="{StaticResource CardTitle}" VerticalOptions="Center" />
+                        <ActivityIndicator Grid.Column="1" IsRunning="{Binding Profile.IsBusy}"
+                                           IsVisible="{Binding Profile.IsBusy}" />
+                    </Grid>
+
+                    <Border Style="{StaticResource InfoPanel}" IsVisible="{Binding Profile.HasError, Converter={StaticResource IsNotEmptyConverter}}">
+                        <Label Text="{Binding Profile.StatusMessage}" TextColor="{StaticResource ErrorText}" />
                     </Border>
 
-                    <Label Text="История поездок" Style="{StaticResource CardTitle}" />
-
-                    <Label Text="Поездок пока нет."
+                    <Label Text="Здесь появятся завершённые и отменённые поездки."
                            Style="{StaticResource MutedLabel}"
                            IsVisible="{Binding Profile.HasHistory, Converter={StaticResource InvertedBoolConverter}}" />
 
                     <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Profile.History}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource Card}">
-                                    <VerticalStackLayout Spacing="4">
-                                        <Label Text="{Binding Route}" FontAttributes="Bold"
-                                               TextColor="{StaticResource BrandDark}" />
-                                        <Label Text="{Binding DateText}" Style="{StaticResource MutedLabel}" />
-                                        <Label Text="{Binding DriverText}" Style="{StaticResource BodyText}" FontSize="13" />
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Label Grid.Column="0" Text="{Binding StatusText}" Style="{StaticResource BodyText}" />
-                                            <Label Grid.Column="1" Text="{Binding CostText}" FontAttributes="Bold"
-                                                   TextColor="{StaticResource BrandDark}" />
-                                        </Grid>
-                                        <Label Text="{Binding RatingText}" Style="{StaticResource MutedLabel}" />
-                                    </VerticalStackLayout>
+                                <Border Style="{StaticResource HistoryPanel}">
+                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                                        <Label Grid.Row="0" Grid.Column="0" Text="{Binding Route}" FontAttributes="Bold"
+                                               TextColor="{StaticResource BrandDark}"
+                                               LineBreakMode="TailTruncation" MaxLines="2" />
+                                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding CostText}" FontAttributes="Bold"
+                                               TextColor="{StaticResource BrandDark}" VerticalOptions="Start"
+                                               Margin="8,0,0,0" />
+                                        <Label Grid.Row="1" Grid.Column="0" Text="{Binding DateText}" Style="{StaticResource MutedLabel}" />
+                                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding StatusText}"
+                                               TextColor="{Binding StatusColor}" FontAttributes="Bold"
+                                               HorizontalOptions="End" />
+                                        <Label Grid.Row="2" Grid.Column="0" Text="{Binding DriverText}" Style="{StaticResource MutedLabel}"
+                                               LineBreakMode="TailTruncation" MaxLines="1" />
+                                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding RatingText}" Style="{StaticResource MutedLabel}"
+                                               HorizontalOptions="End" Margin="8,0,0,0" />
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
-
-                    <Label Text="{Binding Profile.StatusMessage}"
-                           TextColor="{StaticResource BrandBlue}"
-                           IsVisible="{Binding Profile.StatusMessage, Converter={StaticResource IsNotEmptyConverter}}" />
 
                     <Button Text="Выйти из аккаунта"
                             Command="{Binding LogoutCommand}"
@@ -335,29 +390,40 @@
 
             <!-- раздел «Настройки» -->
             <ScrollView IsVisible="{Binding ShowSettings}">
-                <VerticalStackLayout Margin="{Binding ContentMargin}" Spacing="16">
+                <VerticalStackLayout Margin="{Binding ContentMargin}" Spacing="18">
                     <Label Text="Настройки" Style="{StaticResource SectionTitle}" />
 
-                    <Border Style="{StaticResource Card}">
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="{Binding Settings.ApplicationName}" FontSize="18" FontAttributes="Bold"
-                                   TextColor="{StaticResource BrandDark}" />
-                            <Label Text="{Binding Settings.Description}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding Settings.Version}" Style="{StaticResource MutedLabel}" />
-                        </VerticalStackLayout>
-                    </Border>
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="О ПРИЛОЖЕНИИ" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource HistoryPanel}">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Settings.ApplicationName}" FontSize="18" FontAttributes="Bold"
+                                       TextColor="{StaticResource BrandDark}" />
+                                <Label Text="{Binding Settings.Description}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Settings.Version}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
 
-                    <Border Style="{StaticResource Card}">
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Источник данных" Style="{StaticResource CardTitle}" />
-                            <Label Text="{Binding Settings.DatabaseInfo}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding Settings.ConnectionStatus}" Style="{StaticResource BodyText}" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Button Text="Проверить подключение"
-                            Command="{Binding Settings.CheckConnectionCommand}"
-                            Style="{StaticResource SecondaryButton}" />
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="ПОДКЛЮЧЕНИЕ К ДАННЫМ" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource HistoryPanel}">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="PostgreSQL" Style="{StaticResource BodyText}" FontAttributes="Bold" />
+                                <Label Text="{Binding Settings.DatabaseInfo}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Settings.StatusText}" Style="{StaticResource MutedLabel}"
+                                       TextColor="{Binding Settings.StatusColor}" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Button Text="Проверить подключение"
+                                Command="{Binding Settings.CheckConnectionCommand}"
+                                IsEnabled="{Binding Settings.CanCheck}"
+                                Style="{StaticResource SecondaryButton}" />
+                        <HorizontalStackLayout Spacing="8" IsVisible="{Binding Settings.IsBusy}">
+                            <ActivityIndicator IsRunning="{Binding Settings.IsBusy}" />
+                            <Label Text="Проверяем подключение…" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
 
                     <Button Text="Выйти из аккаунта"
                             Command="{Binding LogoutCommand}"
@@ -370,12 +436,35 @@
         <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Padding="12,8" ColumnSpacing="8"
               BackgroundColor="{StaticResource HeaderBackground}">
             <Button Grid.Column="0" Text="Настройки" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowSettingsCommand}" />
+                    Command="{Binding ShowSettingsCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsSettingsSelected}" Value="True">
+                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
+                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
             <Button Grid.Column="1" Text="Заказать" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowOrderCommand}"
-                    TextColor="{StaticResource BrandOrange}" FontAttributes="Bold" />
+                    Command="{Binding ShowOrderCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsOrderSelected}" Value="True">
+                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
+                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
             <Button Grid.Column="2" Text="Профиль" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowProfileCommand}" />
+                    Command="{Binding ShowProfileCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsProfileSelected}" Value="True">
+                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
+                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
         </Grid>
         <BoxView Grid.Row="2" VerticalOptions="Start" HeightRequest="1"
                  Color="{StaticResource StrokeColor}" />

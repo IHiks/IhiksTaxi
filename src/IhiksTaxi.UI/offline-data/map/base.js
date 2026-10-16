@@ -137,7 +137,7 @@
 				}
 				buildingsLayer = L.geoJSON(geo, {
 					renderer: buildingRenderer,
-					style: { color: "#b7afa2", weight: 0.5, fillColor: "#ddd6c9", fillOpacity: 0.9 }
+					style: { color: "#f0b88a", weight: 0.5, fillColor: "#ffe3c4", fillOpacity: 0.95 }
 				});
 				updateBuildings();
 			});

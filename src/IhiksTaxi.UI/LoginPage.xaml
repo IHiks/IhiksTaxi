@@ -18,37 +18,35 @@
                    Style="{StaticResource MutedLabel}"
                    HorizontalOptions="Center" />
 
-            <Border Style="{StaticResource Card}">
+            <Border Style="{StaticResource AuthPanel}">
                 <VerticalStackLayout Spacing="16">
 
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <Button Grid.Column="0"
-                                Text="Вход"
-                                Command="{Binding ShowLoginCommand}"
-                                BackgroundColor="{StaticResource SoftBlue}"
-                                TextColor="{StaticResource BrandDark}"
-                                CornerRadius="10">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="False">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource BrandOrange}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Grid.Column="1"
-                                Text="Регистрация"
-                                Command="{Binding ShowRegisterCommand}"
-                                BackgroundColor="{StaticResource SoftBlue}"
-                                TextColor="{StaticResource BrandDark}"
-                                CornerRadius="10">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource BrandOrange}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                    </Grid>
+                    <Border Style="{StaticResource SegmentedControl}">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                            <Button Grid.Column="0"
+                                    Text="Вход"
+                                    Command="{Binding ShowLoginCommand}"
+                                    Style="{StaticResource SegmentButton}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource ActionOrange}" />
+                                        <Setter Property="TextColor" Value="{StaticResource White}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Text="Регистрация"
+                                    Command="{Binding ShowRegisterCommand}"
+                                    Style="{StaticResource SegmentButton}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource ActionOrange}" />
+                                        <Setter Property="TextColor" Value="{StaticResource White}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </Border>
 
                     <VerticalStackLayout Spacing="4" IsVisible="{Binding IsRegisterMode}">
                         <Label Text="Имя" Style="{StaticResource FieldLabel}" />
@@ -78,6 +76,11 @@
                         </Border>
                     </VerticalStackLayout>
 
+                    <Border Style="{StaticResource InfoPanel}"
+                            IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotEmptyConverter}}">
+                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource ErrorText}" />
+                    </Border>
+
                     <Button Text="{Binding ActionLabel}"
                             IsVisible="{Binding IsRegisterMode}"
                             IsEnabled="{Binding CanSubmit}"
@@ -90,17 +93,14 @@
                             Command="{Binding LoginCommand}"
                             Style="{StaticResource PrimaryButton}" />
 
-                    <Label Text="{Binding ErrorMessage}"
-                           TextColor="{StaticResource BrandOrange}"
-                           IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotEmptyConverter}}" />
-
-                    <ActivityIndicator IsRunning="{Binding IsBusy}"
-                                       IsVisible="{Binding IsBusy}"
-                                       Color="{StaticResource BrandOrange}" />
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" IsVisible="{Binding IsBusy}">
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" />
+                        <Label Text="Подождите…" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
 
-            <Label Text="Пароль хранится только в виде хеша. Данные хранятся в PostgreSQL."
+            <Label Text="Пароль хранится только в защищённом виде."
                    Style="{StaticResource MutedLabel}"
                    HorizontalTextAlignment="Center" />
         </VerticalStackLayout>

@@ -15,5 +15,7 @@ public sealed class TripInfo
 	public string? DriverName { get; init; }
 	public string? DriverPhone { get; init; }
 	public string? Vehicle { get; init; }
+	public string? VehiclePlate { get; init; }
+	public string? VehicleColor { get; init; }
 	public int? Rating { get; init; }
 }

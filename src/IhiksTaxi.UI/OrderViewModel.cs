@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using IhiksTaxi.Application;
 using IhiksTaxi.Domain;
+using Microsoft.Maui.Graphics;
 
 namespace IhiksTaxi.UI;
 
@@ -232,10 +233,16 @@ public class OrderViewModel : ObservableObject
 	public bool ShowOrderForm => ActiveTrip is null;
 	public string ActiveStatusText => ActiveTrip is null ? string.Empty : StatusLabels.Of(ActiveTrip.StatusName);
 	public string ActiveRoute => ActiveTrip is null ? string.Empty : $"{ActiveTrip.FromAddress} → {ActiveTrip.ToAddress}";
-	public string ActiveDriver => ActiveTrip?.DriverName is null
-		? "Водитель ещё не назначен"
-		: $"{ActiveTrip.DriverName}, {PhoneNumber.Format(ActiveTrip.DriverPhone)}";
-	public string ActiveVehicle => ActiveTrip?.Vehicle ?? "Автомобиль уточняется";
+	public bool HasDriver => ActiveTrip?.DriverId is not null;
+	public string ActiveDriverName => ActiveTrip?.DriverName ?? "Водитель ещё не назначен";
+	public string ActiveDriverPhone => ActiveTrip?.DriverPhone is null
+		? string.Empty
+		: PhoneNumber.Format(ActiveTrip.DriverPhone);
+	public string ActiveDriverInitials => Initials(ActiveTrip?.DriverName);
+	public string ActiveVehicleName => ActiveTrip?.Vehicle ?? "Автомобиль уточняется";
+	public string ActiveVehiclePlate => ActiveTrip?.VehiclePlate ?? "—";
+	public string ActiveVehicleColor => ActiveTrip?.VehicleColor ?? string.Empty;
+	public Color ActiveVehicleColorSwatch => CarColors.Resolve(ActiveTrip?.VehicleColor);
 	public string ActiveCost => ActiveTrip is null ? string.Empty : $"{ActiveTrip.Cost:0.##} ₽";
 	public string ActiveTariffText
 	{
@@ -282,7 +289,10 @@ public class OrderViewModel : ObservableObject
 			var tariffs = await _service.GetTariffsAsync();
 			TariffOptions.Clear();
 			foreach (var tariff in tariffs)
-				TariffOptions.Add(new TariffOption(tariff, SelectTariff));
+			{
+				var option = new TariffOption(tariff, SelectTariff) { Column = TariffOptions.Count };
+				TariffOptions.Add(option);
+			}
 
 			if (SelectedTariff is null && TariffOptions.Count > 0)
 				SelectTariff(TariffOptions[0]);
@@ -594,7 +604,7 @@ public class OrderViewModel : ObservableObject
 			SetActive(trip);
 			Message = trip.DriverId is null
 				? "Свободных водителей этого тарифа нет. Можно повторить поиск."
-				: "Заказ принят, водитель назначен.";
+				: null;
 		}
 		catch (Exception ex)
 		{
@@ -716,8 +726,14 @@ public class OrderViewModel : ObservableObject
 		OnPropertyChanged(nameof(ShowOrderForm));
 		OnPropertyChanged(nameof(ActiveStatusText));
 		OnPropertyChanged(nameof(ActiveRoute));
-		OnPropertyChanged(nameof(ActiveDriver));
-		OnPropertyChanged(nameof(ActiveVehicle));
+		OnPropertyChanged(nameof(HasDriver));
+		OnPropertyChanged(nameof(ActiveDriverName));
+		OnPropertyChanged(nameof(ActiveDriverPhone));
+		OnPropertyChanged(nameof(ActiveDriverInitials));
+		OnPropertyChanged(nameof(ActiveVehicleName));
+		OnPropertyChanged(nameof(ActiveVehiclePlate));
+		OnPropertyChanged(nameof(ActiveVehicleColor));
+		OnPropertyChanged(nameof(ActiveVehicleColorSwatch));
 		OnPropertyChanged(nameof(ActiveCost));
 		OnPropertyChanged(nameof(ActiveTariffText));
 		OnPropertyChanged(nameof(AdvanceLabel));
@@ -728,6 +744,17 @@ public class OrderViewModel : ObservableObject
 		OnPropertyChanged(nameof(CanRate));
 		OnPropertyChanged(nameof(CanCreate));
 		RefreshMap();
+	}
+
+	private static string Initials(string? fullName)
+	{
+		if (string.IsNullOrWhiteSpace(fullName))
+			return "—";
+
+		var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		return parts.Length == 1
+			? parts[0][..1].ToUpperInvariant()
+			: string.Concat(parts[0][..1], parts[1][..1]).ToUpperInvariant();
 	}
 
 	private static string AdvanceText(string statusName) => statusName switch

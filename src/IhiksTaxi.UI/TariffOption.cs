@@ -16,6 +16,8 @@ public class TariffOption : ObservableObject
 	public TariffInfo Info { get; }
 	public int Id => Info.Id;
 	public string DisplayName { get; }
+	public string BaseCostText => $"от {Info.BaseCost:0.##} ₽";
+	public int Column { get; set; }
 	public ICommand SelectCommand { get; }
 
 	private bool _isSelected;

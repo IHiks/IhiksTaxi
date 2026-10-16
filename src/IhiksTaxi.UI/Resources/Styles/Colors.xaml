@@ -21,14 +21,34 @@
 
     <!-- фирменные цвета IHIKS Taxi -->
     <Color x:Key="BrandOrange">#FF8000</Color>
+    <Color x:Key="ActionOrange">#FF8000</Color>
+    <Color x:Key="ActionOrangeHover">#F27300</Color>
+    <Color x:Key="ActionOrangePressed">#E06600</Color>
     <Color x:Key="BrandDark">#102A43</Color>
     <Color x:Key="BrandBlue">#486581</Color>
     <Color x:Key="SoftBlue">#EAF2F8</Color>
     <Color x:Key="PageBackground">#F7F9FC</Color>
     <Color x:Key="HeaderBackground">#FFFFFF</Color>
-    <Color x:Key="MutedText">#627D98</Color>
+    <Color x:Key="MutedText">#486581</Color>
+    <Color x:Key="TertiaryText">#627D98</Color>
     <Color x:Key="CardBackground">#FFFFFF</Color>
     <Color x:Key="StrokeColor">#D9E2EC</Color>
+    <Color x:Key="SurfaceMuted">#EAF2F8</Color>
+    <Color x:Key="SurfaceWarm">#FFF1E5</Color>
+    <Color x:Key="FocusRing">#FFB266</Color>
+    <Color x:Key="FocusColor">#FF8A00</Color>
+    <Color x:Key="SoftOrange">#E08A3C</Color>
+    <Color x:Key="OrangeSurface">#FFF6EE</Color>
+    <Color x:Key="TileBorder">#DCE3EA</Color>
+    <Color x:Key="ColorDotBorder">#D6DEE7</Color>
+    <Color x:Key="DisabledBackground">#E6ECF2</Color>
+    <Color x:Key="DisabledText">#526D82</Color>
+    <Color x:Key="SuccessText">#1F7A4C</Color>
+    <Color x:Key="SuccessBackground">#EAF7F0</Color>
+    <Color x:Key="WarningText">#8A4B00</Color>
+    <Color x:Key="WarningBackground">#FFF4E5</Color>
+    <Color x:Key="ErrorText">#B42318</Color>
+    <Color x:Key="ErrorBackground">#FDECEC</Color>
 
     <Color x:Key="Gray100">#E1E1E1</Color>
     <Color x:Key="Gray200">#C8C8C8</Color>

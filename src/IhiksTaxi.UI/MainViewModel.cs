@@ -47,13 +47,6 @@ public class MainViewModel : ObservableObject
 		private set => Set(ref _contentMargin, value);
 	}
 
-	private bool _showSubtitle = true;
-	public bool ShowSubtitle
-	{
-		get => _showSubtitle;
-		private set => Set(ref _showSubtitle, value);
-	}
-
 	private double _orderColumnSpacing = 12;
 	public double OrderColumnSpacing
 	{
@@ -91,6 +84,7 @@ public class MainViewModel : ObservableObject
 			OnPropertyChanged(nameof(OrderPanelColumn));
 			OnPropertyChanged(nameof(OrderPanelRowSpan));
 			OnPropertyChanged(nameof(OrderPanelColumnSpan));
+			OnPropertyChanged(nameof(OrderPanelColumnWidth));
 		}
 	}
 
@@ -101,6 +95,9 @@ public class MainViewModel : ObservableObject
 	public int OrderPanelColumn => IsStacked ? 0 : 1;
 	public int OrderPanelRowSpan => IsStacked ? 1 : 2;
 	public int OrderPanelColumnSpan => IsStacked ? 2 : 1;
+
+	// в широком режиме панель заказа занимает 420 DIP, а не половину окна, чтобы карта получала остаток
+	public GridLength OrderPanelColumnWidth => IsStacked ? GridLength.Star : new GridLength(420);
 
 	public void ApplySize(double width, double height)
 	{
@@ -116,7 +113,6 @@ public class MainViewModel : ObservableObject
 		double side = width < 620 ? 12 : Math.Max(24, (width - 1180) / 2);
 		bool compact = height < 700 || width < 840;
 		ContentMargin = new Thickness(side, compact ? 12 : 20);
-		ShowSubtitle = width >= 720 && height >= 650;
 
 		bool wide = width >= 1100;
 		OrderColumnSpacing = stacked ? 0 : wide ? 20 : 14;
@@ -127,6 +123,9 @@ public class MainViewModel : ObservableObject
 	public bool ShowOrder => _section == Section.Order;
 	public bool ShowProfile => _section == Section.Profile;
 	public bool ShowSettings => _section == Section.Settings;
+	public bool IsOrderSelected => ShowOrder;
+	public bool IsProfileSelected => ShowProfile;
+	public bool IsSettingsSelected => ShowSettings;
 
 	private void Select(Section section)
 	{
@@ -134,6 +133,9 @@ public class MainViewModel : ObservableObject
 		OnPropertyChanged(nameof(ShowOrder));
 		OnPropertyChanged(nameof(ShowProfile));
 		OnPropertyChanged(nameof(ShowSettings));
+		OnPropertyChanged(nameof(IsOrderSelected));
+		OnPropertyChanged(nameof(IsProfileSelected));
+		OnPropertyChanged(nameof(IsSettingsSelected));
 
 		if (section == Section.Profile)
 			_ = Profile.RefreshAsync();

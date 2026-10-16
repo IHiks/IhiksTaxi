@@ -366,7 +366,9 @@ public sealed class EfTaxiStore : ITaxiStore
 			DriverId = trip.DriverId,
 			DriverName = trip.Driver?.FullName,
 			DriverPhone = trip.Driver?.Phone,
-			Vehicle = vehicle is null ? null : $"{vehicle.Brand} {vehicle.Model} · {vehicle.Plate}",
+			Vehicle = vehicle is null ? null : $"{vehicle.Brand} {vehicle.Model}",
+			VehiclePlate = vehicle?.Plate,
+			VehicleColor = vehicle?.Color,
 			Rating = trip.Rating?.Rate,
 		};
 	}
