@@ -8,11 +8,22 @@ namespace IhiksTaxi.UI;
 
 public class OrderViewModel : ObservableObject
 {
+	private const int DebounceMs = 300;
+	private const int MaxSuggestions = 5;
+
 	private readonly TripService _service;
 	private readonly SessionService _session;
 	private readonly RouteMapPresenter _map;
 	private int _estimateToken;
-	private int _searchToken;
+	private CancellationTokenSource? _fromSearch;
+	private CancellationTokenSource? _toSearch;
+
+	private IReadOnlyList<DriverMapPoint> _driverPoints = Array.Empty<DriverMapPoint>();
+	private FareEstimate? _lastEstimate;
+
+	// точки активной поездки, найденные заново после запуска (в самой поездке хранятся только адреса)
+	private GeocodeResult? _activeFrom;
+	private GeocodeResult? _activeTo;
 
 	public OrderViewModel(TripService service, SessionService session, RouteMapPresenter map)
 	{
@@ -25,28 +36,21 @@ public class OrderViewModel : ObservableObject
 		AdvanceCommand = new Command(async () => await AdvanceAsync());
 		CancelCommand = new Command(async () => await CancelAsync());
 		RateCommand = new Command<string>(async value => await RateAsync(value));
-		PickFromCommand = new Command(async () => await PickStreetAsync(true));
-		PickToCommand = new Command(async () => await PickStreetAsync(false));
-		FindFromCommand = new Command(async () => await FindAddressAsync(true));
-		FindToCommand = new Command(async () => await FindAddressAsync(false));
-		ClearFromCommand = new Command(() => ClearResolvedAddress(true));
-		ClearToCommand = new Command(() => ClearResolvedAddress(false));
+		SelectFromCommand = new Command<GeocodeResult>(item => SelectSuggestion(true, item));
+		SelectToCommand = new Command<GeocodeResult>(item => SelectSuggestion(false, item));
 	}
 
 	public ObservableCollection<TariffOption> TariffOptions { get; } = new();
-	public ObservableCollection<StreetInfo> Streets { get; } = new();
+	public ObservableCollection<GeocodeResult> FromSuggestions { get; } = new();
+	public ObservableCollection<GeocodeResult> ToSuggestions { get; } = new();
 
 	public ICommand CreateCommand { get; }
 	public ICommand SearchDriverCommand { get; }
 	public ICommand AdvanceCommand { get; }
 	public ICommand CancelCommand { get; }
 	public ICommand RateCommand { get; }
-	public ICommand PickFromCommand { get; }
-	public ICommand PickToCommand { get; }
-	public ICommand FindFromCommand { get; }
-	public ICommand FindToCommand { get; }
-	public ICommand ClearFromCommand { get; }
-	public ICommand ClearToCommand { get; }
+	public ICommand SelectFromCommand { get; }
+	public ICommand SelectToCommand { get; }
 
 	private int PassengerId => _session.PassengerId ?? 0;
 
@@ -64,31 +68,35 @@ public class OrderViewModel : ObservableObject
 		}
 	}
 
-	private StreetInfo? _fromStreet;
-	public StreetInfo? FromStreet
+	private string _fromQuery = string.Empty;
+	public string FromQuery
 	{
-		get => _fromStreet;
+		get => _fromQuery;
 		set
 		{
-			if (Set(ref _fromStreet, value))
-			{
-				OnPropertyChanged(nameof(FromAddressText));
-				_ = RefreshEstimateAsync();
-			}
+			if (!Set(ref _fromQuery, value) || _applyingSuggestion)
+				return;
+
+			FromResolved = null;
+			_fromEmpty = false;
+			OnPropertyChanged(nameof(FromPointStatus));
+			_ = SearchSuggestionsAsync(true);
 		}
 	}
 
-	private StreetInfo? _toStreet;
-	public StreetInfo? ToStreet
+	private string _toQuery = string.Empty;
+	public string ToQuery
 	{
-		get => _toStreet;
+		get => _toQuery;
 		set
 		{
-			if (Set(ref _toStreet, value))
-			{
-				OnPropertyChanged(nameof(ToAddressText));
-				_ = RefreshEstimateAsync();
-			}
+			if (!Set(ref _toQuery, value) || _applyingSuggestion)
+				return;
+
+			ToResolved = null;
+			_toEmpty = false;
+			OnPropertyChanged(nameof(ToPointStatus));
+			_ = SearchSuggestionsAsync(false);
 		}
 	}
 
@@ -112,34 +120,6 @@ public class OrderViewModel : ObservableObject
 
 	public bool HasMap => MapSource is not null;
 
-	private string _fromHouse = string.Empty;
-	public string FromHouse
-	{
-		get => _fromHouse;
-		set
-		{
-			if (Set(ref _fromHouse, value))
-			{
-				ClearResolvedAddress(true);
-				OnPropertyChanged(nameof(FromAddressText));
-			}
-		}
-	}
-
-	private string _toHouse = string.Empty;
-	public string ToHouse
-	{
-		get => _toHouse;
-		set
-		{
-			if (Set(ref _toHouse, value))
-			{
-				ClearResolvedAddress(false);
-				OnPropertyChanged(nameof(ToAddressText));
-			}
-		}
-	}
-
 	private GeocodeResult? _fromResolved;
 	public GeocodeResult? FromResolved
 	{
@@ -148,8 +128,9 @@ public class OrderViewModel : ObservableObject
 		{
 			if (Set(ref _fromResolved, value))
 			{
-				OnPropertyChanged(nameof(FromAddressText));
 				OnPropertyChanged(nameof(FromPointStatus));
+				OnPropertyChanged(nameof(HasFromPoint));
+				_ = RefreshEstimateAsync();
 			}
 		}
 	}
@@ -162,34 +143,38 @@ public class OrderViewModel : ObservableObject
 		{
 			if (Set(ref _toResolved, value))
 			{
-				OnPropertyChanged(nameof(ToAddressText));
 				OnPropertyChanged(nameof(ToPointStatus));
+				OnPropertyChanged(nameof(HasToPoint));
+				_ = RefreshEstimateAsync();
 			}
 		}
 	}
 
-	private bool _isSearching;
-	public bool IsSearching
-	{
-		get => _isSearching;
-		private set => Set(ref _isSearching, value);
-	}
+	public bool HasFromSuggestions => FromSuggestions.Count > 0;
+	public bool HasToSuggestions => ToSuggestions.Count > 0;
 
-	public string FromAddressText => ComposeAddress(FromStreet, FromHouse);
-	public string ToAddressText => ComposeAddress(ToStreet, ToHouse);
-
-	public string FromPointStatus => StatusOf(FromResolved);
-	public string ToPointStatus => StatusOf(ToResolved);
+	public string FromPointStatus => StatusOf(FromResolved, FromQuery, _fromEmpty);
+	public string ToPointStatus => StatusOf(ToResolved, ToQuery, _toEmpty);
 	public bool HasFromPoint => FromResolved is not null;
 	public bool HasToPoint => ToResolved is not null;
 
-	private static string StatusOf(GeocodeResult? result) => result is null
-		? string.Empty
-		: result.FromStreetFallback
-			? $"Найдена только улица: {result.DisplayName}. Точный дом не найден — координаты примерные."
-			: result.Exact
-				? $"Найден адрес: {result.DisplayName}"
-				: $"Найдена улица: {result.DisplayName} (без номера дома)";
+	private bool _fromEmpty;
+	private bool _toEmpty;
+	private bool _applyingSuggestion;
+
+	private static string StatusOf(GeocodeResult? resolved, string query, bool empty)
+	{
+		if (resolved is not null)
+			return resolved.FromStreetFallback
+				? $"Найдена только улица: {resolved.DisplayName}. Точный дом не найден — координаты примерные."
+				: resolved.Exact
+					? $"Найден адрес: {resolved.DisplayName}"
+					: $"Найдена улица: {resolved.DisplayName} (без номера дома)";
+
+		return empty && query.Trim().Length > 0
+			? $"По запросу «{query.Trim()}» ничего не найдено."
+			: string.Empty;
+	}
 
 	private string _distanceText = "—";
 	public string DistanceText
@@ -267,18 +252,12 @@ public class OrderViewModel : ObservableObject
 	public string AdvanceLabel => ActiveTrip is null ? string.Empty : AdvanceText(ActiveTrip.StatusName);
 	public string RatingText => ActiveTrip?.Rating is null ? string.Empty : $"Оценка водителю: {ActiveTrip.Rating}/5";
 
-	// точка на карте: подтверждённый адрес с домом, иначе центр выбранной улицы
-	private GeoPoint FromDisplayPoint => FromResolved?.Point ?? FromStreet!.ToGeoPoint();
-	private GeoPoint ToDisplayPoint => ToResolved?.Point ?? ToStreet!.ToGeoPoint();
-	private string FromDisplayName => FromResolved?.DisplayName ?? FromAddressText;
-	private string ToDisplayName => ToResolved?.DisplayName ?? ToAddressText;
-
 	public bool CanCreate => !IsBusy
 		&& HasEstimate
 		&& SelectedTariff is not null
-		&& FromStreet is not null
-		&& ToStreet is not null
-		&& FromStreet.Id != ToStreet.Id;
+		&& HasFromPoint
+		&& HasToPoint
+		&& !SameAddress();
 	public bool CanSearchDriver => ActiveTrip?.StatusName == TripStatusNames.SearchingDriver;
 	public bool CanAdvance => ActiveTrip is not null
 		&& !TripStatusRules.IsTerminal(ActiveTrip.StatusName)
@@ -288,9 +267,12 @@ public class OrderViewModel : ObservableObject
 
 	public async Task ActivateAsync()
 	{
+		MapSource = _map.HasMap ? new UrlWebViewSource { Url = _map.Source! } : null;
+
 		await LoadTariffsAsync();
-		await LoadStreetsAsync();
 		await LoadActiveTripAsync();
+		await LoadDriverPointsAsync();
+		RefreshMap();
 	}
 
 	public async Task LoadTariffsAsync()
@@ -313,35 +295,90 @@ public class OrderViewModel : ObservableObject
 		}
 	}
 
-	public async Task LoadStreetsAsync()
-	{
-		try
-		{
-			var streets = await _service.GetStreetsAsync();
-			Streets.Clear();
-			foreach (var street in streets)
-				Streets.Add(street);
-
-			FromStreet ??= Streets.FirstOrDefault();
-			ToStreet ??= Streets.Skip(1).FirstOrDefault();
-			await RefreshEstimateAsync();
-		}
-		catch (Exception ex)
-		{
-			Message = "Не удалось загрузить список улиц. " + ErrorText.Describe(ex);
-		}
-	}
-
 	public async Task LoadActiveTripAsync()
 	{
 		try
 		{
-			SetActive(await _service.GetActiveTripAsync(PassengerId));
+			var trip = await _service.GetActiveTripAsync(PassengerId);
+			SetActive(trip);
+
+			if (trip is not null)
+				await ResolveActiveAddressesAsync(trip);
 		}
 		catch (Exception ex)
 		{
 			Message = "Нет связи с базой данных. " + ErrorText.Describe(ex);
 		}
+	}
+
+	public async Task LoadDriverPointsAsync()
+	{
+		try
+		{
+			_driverPoints = await _service.GetDriverMapPointsAsync();
+		}
+		catch (Exception ex)
+		{
+			Message = "Не удалось загрузить водителей для карты. " + ErrorText.Describe(ex);
+		}
+	}
+
+	// при запуске у активной поездки есть только адреса: пробуем найти их точки,
+	// чтобы показать маршрут и машину; если не вышло — карта покажет хотя бы водителей
+	private async Task ResolveActiveAddressesAsync(TripInfo trip)
+	{
+		if (FromResolved is null)
+			_activeFrom = await TryGeocodeAsync(trip.FromAddress);
+		if (ToResolved is null)
+			_activeTo = await TryGeocodeAsync(trip.ToAddress);
+
+		var from = FromResolved ?? _activeFrom;
+		var to = ToResolved ?? _activeTo;
+		if (from is not null && to is not null)
+		{
+			try
+			{
+				_lastEstimate = await _service.EstimateAsync(from.Point, to.Point, trip.TariffId);
+				MapNote = _lastEstimate.IsApproximate
+					? "Маршрут по дорогам не построен — показано расстояние по прямой."
+					: string.Empty;
+			}
+			catch (Exception ex)
+			{
+				Message = "Не удалось построить маршрут текущей поездки. " + ErrorText.Describe(ex);
+			}
+		}
+
+		RefreshMap();
+	}
+
+	private async Task<GeocodeResult?> TryGeocodeAsync(string address)
+	{
+		try
+		{
+			var found = await _service.SearchAddressesAsync(address);
+			return found.Count > 0 ? found[0] : null;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private void RefreshMap()
+	{
+		if (MapSource is null)
+			return;
+
+		var from = FromResolved ?? _activeFrom;
+		var to = ToResolved ?? _activeTo;
+
+		_map.Update(MapStateBuilder.Build(
+			_driverPoints,
+			from?.Point, from?.DisplayName,
+			to?.Point, to?.DisplayName,
+			_lastEstimate,
+			ActiveTrip));
 	}
 
 	private void SelectTariff(TariffOption option)
@@ -352,120 +389,122 @@ public class OrderViewModel : ObservableObject
 		SelectedTariff = option.Info;
 	}
 
-	private async Task PickStreetAsync(bool isFrom)
+	// подсказки по текущему тексту поля; каждое новое нажатие клавиши отменяет предыдущий поиск
+	private async Task SearchSuggestionsAsync(bool isFrom)
 	{
-		if (Streets.Count == 0)
-		{
-			Message = "Список улиц пуст. Проверьте подключение к базе данных.";
-			return;
-		}
-
-		var names = Streets.Select(s => s.Name).ToArray();
-		var choice = await Microsoft.Maui.Controls.Application.Current!.MainPage!
-			.DisplayActionSheet(isFrom ? "Откуда" : "Куда", "Отмена", null, names);
-
-		if (string.IsNullOrEmpty(choice) || choice == "Отмена")
-			return;
-
-		var street = Streets.FirstOrDefault(s => s.Name == choice);
-		if (street is null)
-			return;
-
+		var cts = new CancellationTokenSource();
 		if (isFrom)
 		{
-			FromStreet = street;
-			ClearResolvedAddress(true);
+			_fromSearch?.Cancel();
+			_fromSearch = cts;
 		}
 		else
 		{
-			ToStreet = street;
-			ClearResolvedAddress(false);
-		}
-	}
-
-	// ищем адрес в геокодере по явному нажатию кнопки; старый результат отменяем через токен
-	private async Task FindAddressAsync(bool isFrom)
-	{
-		var street = isFrom ? FromStreet : ToStreet;
-		if (street is null)
-		{
-			Message = "Сначала выберите улицу.";
-			return;
+			_toSearch?.Cancel();
+			_toSearch = cts;
 		}
 
-		var house = (isFrom ? FromHouse : ToHouse).Trim();
-		int token = ++_searchToken;
-		IsSearching = true;
+		var token = cts.Token;
+
 		try
 		{
-			var found = await _service.FindAddressesAsync(street.Name, house);
-			if (token != _searchToken)
+			await Task.Delay(DebounceMs, token);
+
+			var query = isFrom ? FromQuery : ToQuery;
+			var found = await _service.SearchAddressesAsync(query, token);
+			if (token.IsCancellationRequested)
 				return;
 
-			if (found.Count == 0)
-			{
-				Message = $"Адрес «{street.Name}{(house.Length > 0 ? ", " + house : string.Empty)}» не найден. Уточните улицу или дом.";
-				return;
-			}
-
-			Message = null;
-			var variants = found
-				.Select(r => r.FromStreetFallback
-					? $"{r.DisplayName} — точный дом не найден, координаты примерные"
-					: r.DisplayName)
-				.ToArray();
-
-			var choice = variants.Length == 1
-				? variants[0]
-				: await Microsoft.Maui.Controls.Application.Current!.MainPage!
-					.DisplayActionSheet("Найденные адреса", "Отмена", null, variants);
-
-			if (string.IsNullOrEmpty(choice) || choice == "Отмена")
-				return;
-
-			var index = Array.IndexOf(variants, choice);
-			if (index < 0)
-				return;
+			var shown = found.Take(MaxSuggestions).ToList();
 
 			if (isFrom)
-				FromResolved = found[index];
+			{
+				_fromEmpty = shown.Count == 0;
+				PublishSuggestions(true, shown);
+				OnPropertyChanged(nameof(FromPointStatus));
+			}
 			else
-				ToResolved = found[index];
+			{
+				_toEmpty = shown.Count == 0;
+				PublishSuggestions(false, shown);
+				OnPropertyChanged(nameof(ToPointStatus));
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// поиск уже устарел, результаты прежнего запроса показывать не нужно
 		}
 		catch (Exception ex)
 		{
-			if (token != _searchToken)
+			// старые подсказки и выбранный адрес не трогаем, сообщаем о сбое
+			if (token.IsCancellationRequested)
 				return;
 
 			Message = "Не удалось выполнить поиск адреса. " + ErrorText.Describe(ex);
 		}
+	}
+
+	private void PublishSuggestions(bool isFrom, IReadOnlyList<GeocodeResult> shown)
+	{
+		var target = isFrom ? FromSuggestions : ToSuggestions;
+
+		target.Clear();
+		foreach (var item in shown)
+			target.Add(item);
+
+		if (isFrom)
+			OnPropertyChanged(nameof(HasFromSuggestions));
+		else
+			OnPropertyChanged(nameof(HasToSuggestions));
+	}
+
+	private void SelectSuggestion(bool isFrom, GeocodeResult? result)
+	{
+		if (result is null)
+			return;
+
+		_applyingSuggestion = true;
+		try
+		{
+			if (isFrom)
+				FromQuery = result.DisplayName;
+			else
+				ToQuery = result.DisplayName;
+		}
 		finally
 		{
-			if (token == _searchToken)
-				IsSearching = false;
+			_applyingSuggestion = false;
+		}
+
+		if (isFrom)
+		{
+			PublishSuggestions(true, Array.Empty<GeocodeResult>());
+			_fromEmpty = false;
+			FromResolved = result;
+		}
+		else
+		{
+			PublishSuggestions(false, Array.Empty<GeocodeResult>());
+			_toEmpty = false;
+			ToResolved = result;
 		}
 	}
 
-	private void ClearResolvedAddress(bool isFrom)
-	{
-		if (isFrom)
-			FromResolved = null;
-		else
-			ToResolved = null;
-	}
+	private bool SameAddress()
+		=> FromResolved is not null && ToResolved is not null && FromResolved.Point.Equals(ToResolved.Point);
 
 	private async Task RefreshEstimateAsync()
 	{
 		int token = ++_estimateToken;
 
-		if (SelectedTariff is null || FromStreet is null || ToStreet is null)
+		if (SelectedTariff is null || !HasFromPoint || !HasToPoint)
 		{
 			ClearEstimate();
 			OnPropertyChanged(nameof(CanCreate));
 			return;
 		}
 
-		if (FromStreet.Id == ToStreet.Id)
+		if (SameAddress())
 		{
 			ClearEstimate();
 			Message = "Адрес подачи и адрес назначения должны различаться.";
@@ -475,9 +514,7 @@ public class OrderViewModel : ObservableObject
 
 		try
 		{
-			var estimate = HasFromPoint && HasToPoint
-				? await _service.EstimateAsync(FromResolved!.Point, ToResolved!.Point, SelectedTariff.Id)
-				: await _service.EstimateAsync(FromStreet.Id, ToStreet.Id, SelectedTariff.Id);
+			var estimate = await _service.EstimateAsync(FromResolved!.Point, ToResolved!.Point, SelectedTariff.Id);
 
 			if (token != _estimateToken)
 				return;
@@ -485,10 +522,11 @@ public class OrderViewModel : ObservableObject
 			DistanceText = $"{estimate.DistanceKm:0.##} км";
 			DurationText = $"{estimate.DurationMin} мин";
 			EstimatedCost = estimate.Cost;
-			MapSource = _map.Create(estimate, FromDisplayPoint, FromDisplayName, ToDisplayPoint, ToDisplayName);
+			_lastEstimate = estimate;
 			MapNote = estimate.IsApproximate
 				? "Маршрут по дорогам не построен — показано расстояние по прямой."
 				: string.Empty;
+			RefreshMap();
 			Message = null;
 		}
 		catch (Exception ex)
@@ -510,8 +548,9 @@ public class OrderViewModel : ObservableObject
 		DistanceText = "—";
 		DurationText = "—";
 		EstimatedCost = 0;
-		MapSource = null;
+		_lastEstimate = null;
 		MapNote = string.Empty;
+		RefreshMap();
 		OnPropertyChanged(nameof(HasEstimate));
 		OnPropertyChanged(nameof(EstimateText));
 	}
@@ -527,13 +566,13 @@ public class OrderViewModel : ObservableObject
 			return;
 		}
 
-		if (FromStreet is null || ToStreet is null)
+		if (!HasFromPoint || !HasToPoint)
 		{
-			Message = "Выберите улицы подачи и назначения.";
+			Message = "Выберите адреса подачи и назначения из подсказок.";
 			return;
 		}
 
-		if (FromStreet.Id == ToStreet.Id)
+		if (SameAddress())
 		{
 			Message = "Адрес подачи и адрес назначения должны различаться.";
 			return;
@@ -548,12 +587,9 @@ public class OrderViewModel : ObservableObject
 		IsBusy = true;
 		try
 		{
-			var trip = HasFromPoint && HasToPoint
-				? await _service.CreateTripAsync(PassengerId, SelectedTariff.Id,
-					(FromStreet.Name, FromHouse, FromResolved!.Point),
-					(ToStreet.Name, ToHouse, ToResolved!.Point))
-				: await _service.CreateTripAsync(PassengerId, SelectedTariff.Id,
-					FromStreet.Id, FromHouse, ToStreet.Id, ToHouse);
+			var trip = await _service.CreateTripAsync(PassengerId, SelectedTariff.Id,
+				(FromResolved!.DisplayName, string.Empty, FromResolved!.Point),
+				(ToResolved!.DisplayName, string.Empty, ToResolved!.Point));
 
 			SetActive(trip);
 			Message = trip.DriverId is null
@@ -600,8 +636,16 @@ public class OrderViewModel : ObservableObject
 		IsBusy = true;
 		try
 		{
-			SetActive(await _service.AdvanceAsync(ActiveTrip.Id));
+			var trip = await _service.AdvanceAsync(ActiveTrip.Id);
+			SetActive(trip);
 			Message = null;
+
+			// поездка завершена — водитель остался в точке Б, перечитываем его положение
+			if (trip.StatusName == TripStatusNames.Completed)
+			{
+				await LoadDriverPointsAsync();
+				RefreshMap();
+			}
 		}
 		catch (Exception ex)
 		{
@@ -666,6 +710,8 @@ public class OrderViewModel : ObservableObject
 	private void SetActive(TripInfo? trip)
 	{
 		ActiveTrip = trip;
+		_activeFrom = null;
+		_activeTo = null;
 		OnPropertyChanged(nameof(HasActiveTrip));
 		OnPropertyChanged(nameof(ShowOrderForm));
 		OnPropertyChanged(nameof(ActiveStatusText));
@@ -681,15 +727,7 @@ public class OrderViewModel : ObservableObject
 		OnPropertyChanged(nameof(CanCancel));
 		OnPropertyChanged(nameof(CanRate));
 		OnPropertyChanged(nameof(CanCreate));
-	}
-
-	private static string ComposeAddress(StreetInfo? street, string? house)
-	{
-		if (street is null)
-			return "Выберите улицу";
-
-		var trimmed = (house ?? string.Empty).Trim();
-		return trimmed.Length == 0 ? street.Name : $"{street.Name}, {trimmed}";
+		RefreshMap();
 	}
 
 	private static string AdvanceText(string statusName) => statusName switch

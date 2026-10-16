@@ -478,6 +478,7 @@
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontAttributes" Value="None" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="6,8" />
     </Style>
@@ -495,6 +496,7 @@
         <Setter Property="BackgroundColor" Value="{StaticResource SoftBlue}" />
         <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontAttributes" Value="None" />
         <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Padding" Value="14,10" />
     </Style>

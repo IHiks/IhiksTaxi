@@ -54,15 +54,74 @@ public class MainViewModel : ObservableObject
 		private set => Set(ref _showSubtitle, value);
 	}
 
-	// на широком окне контент остаётся узкой читаемой колонкой по центру, на узком — прижимается к краям
-	public void ApplyWidth(double width)
+	private double _orderColumnSpacing = 12;
+	public double OrderColumnSpacing
 	{
-		if (width <= 0)
+		get => _orderColumnSpacing;
+		private set => Set(ref _orderColumnSpacing, value);
+	}
+
+	private double _stackSpacing = 12;
+	public double StackSpacing
+	{
+		get => _stackSpacing;
+		private set => Set(ref _stackSpacing, value);
+	}
+
+	private Thickness _cardPadding = new(12);
+	public Thickness CardPadding
+	{
+		get => _cardPadding;
+		private set => Set(ref _cardPadding, value);
+	}
+
+	private bool _isStacked;
+	public bool IsStacked
+	{
+		get => _isStacked;
+		private set
+		{
+			if (!Set(ref _isStacked, value))
+				return;
+
+			OnPropertyChanged(nameof(OrderMapRow));
+			OnPropertyChanged(nameof(OrderMapColumn));
+			OnPropertyChanged(nameof(OrderMapRowSpan));
+			OnPropertyChanged(nameof(OrderMapColumnSpan));
+			OnPropertyChanged(nameof(OrderPanelColumn));
+			OnPropertyChanged(nameof(OrderPanelRowSpan));
+			OnPropertyChanged(nameof(OrderPanelColumnSpan));
+		}
+	}
+
+	public int OrderMapRow => IsStacked ? 1 : 0;
+	public int OrderMapColumn => 0;
+	public int OrderMapRowSpan => IsStacked ? 1 : 2;
+	public int OrderMapColumnSpan => IsStacked ? 2 : 1;
+	public int OrderPanelColumn => IsStacked ? 0 : 1;
+	public int OrderPanelRowSpan => IsStacked ? 1 : 2;
+	public int OrderPanelColumnSpan => IsStacked ? 2 : 1;
+
+	public void ApplySize(double width, double height)
+	{
+		if (width <= 0 || height <= 0)
 			return;
 
-		double side = width < 620 ? 12 : Math.Max(24, (width - 620) / 2);
-		ContentMargin = new Thickness(side, width < 620 ? 12 : 20);
-		ShowSubtitle = width >= 720;
+		double aspectRatio = width / height;
+		bool stacked = IsStacked
+			? width < 940 || aspectRatio < 1.25
+			: width < 860 || aspectRatio < 1.05;
+		IsStacked = stacked;
+
+		double side = width < 620 ? 12 : Math.Max(24, (width - 1180) / 2);
+		bool compact = height < 700 || width < 840;
+		ContentMargin = new Thickness(side, compact ? 12 : 20);
+		ShowSubtitle = width >= 720 && height >= 650;
+
+		bool wide = width >= 1100;
+		OrderColumnSpacing = stacked ? 0 : wide ? 20 : 14;
+		StackSpacing = compact ? 8 : wide ? 14 : 12;
+		CardPadding = new Thickness(compact ? 10 : wide ? 16 : 12);
 	}
 
 	public bool ShowOrder => _section == Section.Order;

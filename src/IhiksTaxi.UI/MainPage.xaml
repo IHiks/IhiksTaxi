@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:IhiksTaxi.UI"
              x:Class="IhiksTaxi.UI.MainPage"
              BackgroundColor="{StaticResource PageBackground}">
 
@@ -26,104 +27,132 @@
         <Grid Grid.Row="1">
 
             <!-- раздел «Заказать» -->
-            <ScrollView IsVisible="{Binding ShowOrder}">
-                <VerticalStackLayout Margin="{Binding ContentMargin}" Spacing="16">
+            <Grid IsVisible="{Binding ShowOrder}"
+                  Margin="{Binding ContentMargin}"
+                  RowDefinitions="Auto,*,Auto" RowSpacing="12">
 
-                    <Label Text="Заказать поездку" Style="{StaticResource SectionTitle}" />
+                <Label Grid.Row="0" Text="Заказать поездку" Style="{StaticResource SectionTitle}" />
+
+                <Grid Grid.Row="1" RowDefinitions="Auto,*" ColumnDefinitions="*,*"
+                      ColumnSpacing="{Binding OrderColumnSpacing}">
+
+                    <!-- карта видна всё время работы с заказом -->
+                    <Border Grid.Row="{Binding OrderMapRow}"
+                            Grid.Column="{Binding OrderMapColumn}"
+                            Grid.RowSpan="{Binding OrderMapRowSpan}"
+                            Grid.ColumnSpan="{Binding OrderMapColumnSpan}"
+                            Style="{StaticResource Card}" Padding="0"
+                            VerticalOptions="Fill"
+                            IsVisible="{Binding Order.HasMap}">
+                        <Grid>
+                            <WebView x:Name="MapWebView" Source="{Binding Order.MapSource}"
+                                     HorizontalOptions="Fill" VerticalOptions="Fill" />
+                            <Border Margin="12" Padding="8,6"
+                                    HorizontalOptions="Start" VerticalOptions="End"
+                                    BackgroundColor="{StaticResource SoftBlue}" Stroke="{StaticResource StrokeColor}"
+                                    StrokeThickness="1" StrokeShape="RoundRectangle 6"
+                                    IsVisible="{Binding Order.MapNote, Converter={StaticResource IsNotEmptyConverter}}">
+                                <Label Text="{Binding Order.MapNote}" Style="{StaticResource MutedLabel}" />
+                            </Border>
+                        </Grid>
+                    </Border>
 
                     <!-- форма заказа -->
-                    <VerticalStackLayout Spacing="12" IsVisible="{Binding Order.ShowOrderForm}">
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="{Binding OrderPanelColumn}"
+                                         Grid.RowSpan="{Binding OrderPanelRowSpan}"
+                                         Grid.ColumnSpan="{Binding OrderPanelColumnSpan}"
+                                         Spacing="{Binding StackSpacing}"
+                                         VerticalOptions="Start"
+                                         IsVisible="{Binding Order.ShowOrderForm}">
 
                         <!-- маршрут -->
-                        <Border Style="{StaticResource Card}">
-                            <VerticalStackLayout Spacing="10">
+                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
+                            <VerticalStackLayout Spacing="8">
                                 <Label Text="Маршрут" Style="{StaticResource CardTitle}" />
 
                                 <!-- Откуда -->
                                 <Border Style="{StaticResource AddressRow}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                         <Border Grid.Column="0" Style="{StaticResource AddressMarker}"
-                                                VerticalOptions="Center">
+                                                VerticalOptions="Start" Margin="0,6,0,0">
                                             <Label Text="А" HorizontalOptions="Center" VerticalOptions="Center"
                                                    FontAttributes="Bold" TextColor="{StaticResource BrandOrange}" />
                                         </Border>
 
-                                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                            <Grid.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Order.PickFromCommand}" />
-                                            </Grid.GestureRecognizers>
-                                            <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                                <Label Text="Откуда" Style="{StaticResource FieldLabel}" />
-                                                <Label Text="{Binding Order.FromAddressText}"
-                                                       Style="{StaticResource BodyText}"
-                                                       LineBreakMode="TailTruncation" MaxLines="1" />
-                                            </VerticalStackLayout>
-                                            <Label Grid.Column="1" Text="▾" FontSize="16"
-                                                   TextColor="{StaticResource MutedText}"
-                                                   VerticalOptions="Center" Margin="8,0,0,0" />
-                                        </Grid>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Entry Placeholder="Откуда: улица, дом"
+                                                   Text="{Binding Order.FromQuery}" />
 
-                                        <Entry Grid.Column="2" WidthRequest="72" Placeholder="дом"
-                                               Text="{Binding Order.FromHouse}" />
+                                            <ScrollView MaximumHeightRequest="160"
+                                                        VerticalScrollBarVisibility="Never"
+                                                        IsVisible="{Binding Order.HasFromSuggestions}">
+                                                <VerticalStackLayout Spacing="2"
+                                                                     BindableLayout.ItemsSource="{Binding Order.FromSuggestions}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Padding="8,6" BackgroundColor="{StaticResource PageBackground}">
+                                                                <Grid.GestureRecognizers>
+                                                                    <TapGestureRecognizer
+                                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}, Mode=FindAncestorBindingContext}, Path=Order.SelectFromCommand}"
+                                                                        CommandParameter="{Binding .}" />
+                                                                </Grid.GestureRecognizers>
+                                                                <Label Text="{Binding DisplayName}" Style="{StaticResource MutedLabel}"
+                                                                       LineBreakMode="TailTruncation" MaxLines="1" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </VerticalStackLayout>
+                                            </ScrollView>
+                                        </VerticalStackLayout>
                                     </Grid>
                                 </Border>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                    <Label Grid.Column="0" Text="{Binding Order.FromPointStatus}"
-                                           Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                    <Button Grid.Column="1" Text="Найти адрес"
-                                            Command="{Binding Order.FindFromCommand}"
-                                            Style="{StaticResource SecondaryButton}" />
-                                </Grid>
+                                <Label Text="{Binding Order.FromPointStatus}" Style="{StaticResource MutedLabel}"
+                                       IsVisible="{Binding Order.FromPointStatus, Converter={StaticResource IsNotEmptyConverter}}" />
 
                                 <!-- Куда -->
                                 <Border Style="{StaticResource AddressRow}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                         <Border Grid.Column="0" Style="{StaticResource AddressMarker}"
-                                                VerticalOptions="Center">
+                                                VerticalOptions="Start" Margin="0,6,0,0">
                                             <Label Text="Б" HorizontalOptions="Center" VerticalOptions="Center"
                                                    FontAttributes="Bold" TextColor="{StaticResource BrandOrange}" />
                                         </Border>
 
-                                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                            <Grid.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Order.PickToCommand}" />
-                                            </Grid.GestureRecognizers>
-                                            <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                                <Label Text="Куда" Style="{StaticResource FieldLabel}" />
-                                                <Label Text="{Binding Order.ToAddressText}"
-                                                       Style="{StaticResource BodyText}"
-                                                       LineBreakMode="TailTruncation" MaxLines="1" />
-                                            </VerticalStackLayout>
-                                            <Label Grid.Column="1" Text="▾" FontSize="16"
-                                                   TextColor="{StaticResource MutedText}"
-                                                   VerticalOptions="Center" Margin="8,0,0,0" />
-                                        </Grid>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Entry Placeholder="Куда: улица, дом"
+                                                   Text="{Binding Order.ToQuery}" />
 
-                                        <Entry Grid.Column="2" WidthRequest="72" Placeholder="дом"
-                                               Text="{Binding Order.ToHouse}" />
+                                            <ScrollView MaximumHeightRequest="160"
+                                                        VerticalScrollBarVisibility="Never"
+                                                        IsVisible="{Binding Order.HasToSuggestions}">
+                                                <VerticalStackLayout Spacing="2"
+                                                                     BindableLayout.ItemsSource="{Binding Order.ToSuggestions}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Padding="8,6" BackgroundColor="{StaticResource PageBackground}">
+                                                                <Grid.GestureRecognizers>
+                                                                    <TapGestureRecognizer
+                                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}, Mode=FindAncestorBindingContext}, Path=Order.SelectToCommand}"
+                                                                        CommandParameter="{Binding .}" />
+                                                                </Grid.GestureRecognizers>
+                                                                <Label Text="{Binding DisplayName}" Style="{StaticResource MutedLabel}"
+                                                                       LineBreakMode="TailTruncation" MaxLines="1" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </VerticalStackLayout>
+                                            </ScrollView>
+                                        </VerticalStackLayout>
                                     </Grid>
                                 </Border>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                    <Label Grid.Column="0" Text="{Binding Order.ToPointStatus}"
-                                           Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                    <Button Grid.Column="1" Text="Найти адрес"
-                                            Command="{Binding Order.FindToCommand}"
-                                            Style="{StaticResource SecondaryButton}" />
-                                </Grid>
-
-                                <!-- карта маршрута между выбранными улицами -->
-                                <WebView Source="{Binding Order.MapSource}"
-                                         IsVisible="{Binding Order.HasMap}"
-                                         HeightRequest="220" />
-                                <Label Text="{Binding Order.MapNote}"
-                                       IsVisible="{Binding Order.MapNote, Converter={StaticResource IsNotEmptyConverter}}"
-                                       Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Order.ToPointStatus}" Style="{StaticResource MutedLabel}"
+                                       IsVisible="{Binding Order.ToPointStatus, Converter={StaticResource IsNotEmptyConverter}}" />
                             </VerticalStackLayout>
                         </Border>
 
                         <!-- тариф -->
-                        <Border Style="{StaticResource Card}">
-                            <VerticalStackLayout Spacing="10">
+                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
+                            <VerticalStackLayout Spacing="8">
                                 <Label Text="Тариф" Style="{StaticResource CardTitle}" />
 
                                 <FlexLayout BindableLayout.ItemsSource="{Binding Order.TariffOptions}"
@@ -155,8 +184,8 @@
                         </Border>
 
                         <!-- стоимость -->
-                        <Border Style="{StaticResource Card}">
-                            <VerticalStackLayout Spacing="10">
+                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
+                            <VerticalStackLayout Spacing="8">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Grid.Column="0" Text="Стоимость поездки"
                                            Style="{StaticResource BodyText}" VerticalOptions="Center" />
@@ -179,20 +208,22 @@
                                 IsEnabled="{Binding Order.CanCreate}"
                                 Style="{StaticResource PrimaryButton}" />
 
-                        <ActivityIndicator IsRunning="{Binding Order.IsBusy}"
-                                           IsVisible="{Binding Order.IsBusy}"
-                                           Color="{StaticResource BrandOrange}"
-                                           HorizontalOptions="Center" />
+                        <ActivityIndicator IsVisible="{Binding Order.IsBusy}"
+                                           IsRunning="{Binding Order.IsBusy}" />
                     </VerticalStackLayout>
 
                     <!-- текущая поездка -->
-                    <VerticalStackLayout Spacing="12" IsVisible="{Binding Order.HasActiveTrip}">
-                        <Border Style="{StaticResource Card}">
-                            <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="{Binding OrderPanelColumn}"
+                                         Grid.RowSpan="{Binding OrderPanelRowSpan}"
+                                         Grid.ColumnSpan="{Binding OrderPanelColumnSpan}"
+                                         Spacing="{Binding StackSpacing}"
+                                         VerticalOptions="Start"
+                                         IsVisible="{Binding Order.HasActiveTrip}">
+                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}">
+                            <VerticalStackLayout Spacing="8">
                                 <Label Text="Текущая поездка" Style="{StaticResource CardTitle}" />
-                                <Label Text="{Binding Order.ActiveStatusText}"
-                                       TextColor="{StaticResource BrandOrange}"
-                                       FontAttributes="Bold" FontSize="16" />
+                                <Label Text="{Binding Order.ActiveStatusText}" FontSize="16"
+                                       FontAttributes="Bold" TextColor="{StaticResource BrandOrange}" />
                                 <Label Text="{Binding Order.ActiveTariffText}" Style="{StaticResource MutedLabel}" />
                                 <Label Text="{Binding Order.ActiveRoute}" Style="{StaticResource BodyText}" />
 
@@ -207,7 +238,8 @@
                                     <Label Grid.Column="1" Text="{Binding Order.ActiveCost}"
                                            Style="{StaticResource PriceText}" FontSize="20" />
                                 </Grid>
-                                <Label Text="{Binding Order.RatingText}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Order.RatingText}" Style="{StaticResource MutedLabel}"
+                                       IsVisible="{Binding Order.RatingText, Converter={StaticResource IsNotEmptyConverter}}" />
                             </VerticalStackLayout>
                         </Border>
 
@@ -226,7 +258,7 @@
                                 Command="{Binding Order.CancelCommand}"
                                 Style="{StaticResource SecondaryButton}" />
 
-                        <Border Style="{StaticResource Card}" IsVisible="{Binding Order.CanRate}">
+                        <Border Style="{StaticResource Card}" Padding="{Binding CardPadding}" IsVisible="{Binding Order.CanRate}">
                             <VerticalStackLayout Spacing="8">
                                 <Label Text="Оцените водителя" Style="{StaticResource CardTitle}" />
                                 <HorizontalStackLayout Spacing="8">
@@ -238,13 +270,16 @@
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </Border>
-                    </VerticalStackLayout>
 
-                    <Label Text="{Binding Order.Message}"
-                           TextColor="{StaticResource BrandBlue}"
-                           IsVisible="{Binding Order.Message, Converter={StaticResource IsNotEmptyConverter}}" />
-                </VerticalStackLayout>
-            </ScrollView>
+                        <ActivityIndicator IsVisible="{Binding Order.IsBusy}"
+                                           IsRunning="{Binding Order.IsBusy}" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <Label Grid.Row="2" Text="{Binding Order.Message}"
+                       TextColor="{StaticResource BrandBlue}"
+                       IsVisible="{Binding Order.Message, Converter={StaticResource IsNotEmptyConverter}}" />
+            </Grid>
 
             <!-- раздел «Профиль» -->
             <ScrollView IsVisible="{Binding ShowProfile}">

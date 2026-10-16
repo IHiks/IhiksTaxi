@@ -46,6 +46,17 @@ public sealed class TripService
 		};
 	}
 
+	// подсказки по строке из одного поля: «улица, дом»
+	public Task<IReadOnlyList<GeocodeResult>> SearchAddressesAsync(string query,
+		CancellationToken ct = default)
+	{
+		var (street, house) = AddressQuery.Parse(query);
+		if (street.Length == 0)
+			return Task.FromResult<IReadOnlyList<GeocodeResult>>(Array.Empty<GeocodeResult>());
+
+		return FindAddressesAsync(street, house, ct);
+	}
+
 	// расстояние и время считает дорожный роутер по координатам улиц, стоимость — по выбранному тарифу
 	public async Task<FareEstimate> EstimateAsync(int fromStreetId, int toStreetId, int tariffId,
 		CancellationToken ct = default)
@@ -81,6 +92,9 @@ public sealed class TripService
 
 	public Task<IReadOnlyList<StreetInfo>> GetStreetsAsync(CancellationToken ct = default)
 		=> _store.GetStreetsAsync(ct);
+
+	public Task<IReadOnlyList<DriverMapPoint>> GetDriverMapPointsAsync(CancellationToken ct = default)
+		=> _store.GetDriverMapPointsAsync(ct);
 
 	public Task<PassengerInfo?> GetPassengerAsync(int passengerId, CancellationToken ct = default)
 		=> _store.GetPassengerAsync(passengerId, ct);
@@ -178,6 +192,11 @@ public sealed class TripService
 			?? throw new InvalidOperationException($"Поездку из состояния «{trip.StatusName}» дальше перевести нельзя.");
 
 		await _store.SetStatusAsync(tripId, next, ct);
+
+		// завершив поездку, водитель остаётся на улице назначения и следующую поездку берёт оттуда
+		if (next == TripStatusNames.Completed)
+			await ParkDriverAtDestinationAsync(trip, ct);
+
 		return await GetRequiredTripAsync(tripId, ct);
 	}
 
@@ -203,6 +222,28 @@ public sealed class TripService
 			throw new InvalidOperationException("Оценить можно только завершённую поездку.");
 
 		await _store.SetRatingAsync(tripId, rate, ct);
+	}
+
+	// после завершения поездки привязываем водителя к улице точки назначения,
+	// чтобы он не возвращался на прежнее место
+	private async Task ParkDriverAtDestinationAsync(TripInfo trip, CancellationToken ct)
+	{
+		if (trip.DriverId is null)
+			return;
+
+		var (street, house) = AddressQuery.Parse(trip.ToAddress);
+		var found = await FindAddressesAsync(street, house, ct);
+		if (found.Count == 0)
+			return;
+
+		var point = found[0].Point;
+		var streets = await _store.GetStreetsAsync(ct);
+		var nearest = streets
+			.OrderBy(s => GeoDistance.Km(s.ToGeoPoint(), point))
+			.FirstOrDefault();
+
+		if (nearest is not null)
+			await _store.SetDriverStreetAsync(trip.DriverId.Value, nearest.Id, ct);
 	}
 
 	private async Task<bool> AssignDriverAsync(int tripId, int tariffId, GeoPoint? from, CancellationToken ct)

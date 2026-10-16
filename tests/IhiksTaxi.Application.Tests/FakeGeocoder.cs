@@ -9,6 +9,13 @@ internal sealed class FakeGeocoder : IGeocoder
 
 	public FakeGeocoder(IReadOnlyList<GeocodeResult> results) => _results = results;
 
+	public string? LastStreet { get; private set; }
+	public string? LastHouse { get; private set; }
+
 	public Task<IReadOnlyList<GeocodeResult>> SearchAsync(string street, string house, CancellationToken ct = default)
-		=> Task.FromResult(_results);
+	{
+		LastStreet = street;
+		LastHouse = house;
+		return Task.FromResult(_results);
+	}
 }

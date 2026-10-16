@@ -70,7 +70,13 @@ internal sealed class FakeTaxiStore : ITaxiStore
 	public Task<IReadOnlyList<DriverCandidate>> GetDriverCandidatesAsync(int tariffId, CancellationToken ct = default)
 		=> Task.FromResult<IReadOnlyList<DriverCandidate>>(Array.Empty<DriverCandidate>());
 
+	public Task<IReadOnlyList<DriverMapPoint>> GetDriverMapPointsAsync(CancellationToken ct = default)
+		=> Task.FromResult<IReadOnlyList<DriverMapPoint>>(Array.Empty<DriverMapPoint>());
+
 	public Task<bool> TryAssignDriverAsync(int tripId, int driverId, CancellationToken ct = default)
+		=> throw new NotSupportedException();
+
+	public Task SetDriverStreetAsync(int driverId, int streetId, CancellationToken ct = default)
 		=> throw new NotSupportedException();
 
 	public Task SetStatusAsync(int tripId, string statusName, CancellationToken ct = default)

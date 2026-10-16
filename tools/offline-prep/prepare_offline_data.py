@@ -57,7 +57,10 @@ SPEED = {
 }
 
 # заметные линии для подложки: всё, что рисуем, но не обязательно едем
-DISPLAY_MAJOR = {"motorway", "trunk", "primary", "secondary", "tertiary"}
+DISPLAY_MAJOR = {
+    "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
+    "secondary", "secondary_link", "tertiary", "tertiary_link",
+}
 
 
 def log(message):
@@ -129,6 +132,38 @@ def bbox_query(selector, output="out geom;"):
     return f'[out:json][timeout:300];({selector}({s},{w},{n},{e}););{output}'
 
 
+def building_query(south, west, north, east):
+    # зданий в Иванове очень много, поэтому берём их не одной большой выборкой,
+    # а по плиткам: большой запрос Overpass обрывает по таймауту
+    return (f'[out:json][timeout:180];'
+            f'(way["building"]({south},{west},{north},{east}););out geom;')
+
+
+def fetch_buildings(grid, force, fetch):
+    south, west, north, east = BBOX
+    lat_step = (north - south) / grid
+    lon_step = (east - west) / grid
+    merged = {}
+    missing = []
+    for row in range(grid):
+        for col in range(grid):
+            s = round(south + row * lat_step, 6)
+            n = round(south + (row + 1) * lat_step, 6)
+            w = round(west + col * lon_step, 6)
+            e = round(west + (col + 1) * lon_step, 6)
+            name = f"buildings_{row}_{col}"
+            raw = overpass(building_query(s, w, n, e), name, force, fetch)
+            if not raw:
+                missing.append(name)
+                continue
+            # плитки на границе могут вернуть одно и то же здание — храним по id
+            for element in raw["elements"]:
+                merged[(element["type"], element["id"])] = element
+    if missing:
+        log(f"[warn] здания не получены в плитках: {', '.join(missing)}")
+    return {"elements": list(merged.values())}
+
+
 def road_direction(tags):
     if tags.get("junction") in ("roundabout", "circular"):
         return 1
@@ -140,10 +175,11 @@ def road_direction(tags):
     return 0
 
 
-def simplify(coords, tolerance=3.0):
-    # алгоритм Дугласа — Пекера: убираем лишние точки ломаной в пределах 3 м
+def simplify_indices(coords, tolerance):
+    # алгоритм Дугласа — Пекера: возвращает индексы вершин, которые остаются
+    # после упрощения ломаной. tolerance задаётся в тех же единицах, что и coords.
     if len(coords) <= 3:
-        return coords
+        return list(range(len(coords)))
     keep = [False] * len(coords)
     keep[0] = keep[-1] = True
     stack = [(0, len(coords) - 1)]
@@ -166,7 +202,7 @@ def simplify(coords, tolerance=3.0):
             keep[index] = True
             stack.append((first, index))
             stack.append((index, last))
-    return [c for c, k in zip(coords, keep) if k]
+    return [i for i, k in enumerate(keep) if k]
 
 
 def build_roads(raw):
@@ -220,17 +256,29 @@ def build_roads(raw):
     return features, {"nodes": node_coords, "edges": edges}
 
 
+def split_visual_roads(features):
+    major = [feature for feature in features if feature["properties"].get("major")]
+    detail = [feature for feature in features if not feature["properties"].get("major")]
+    return major, detail
+
+
 def build_buildings(raw):
+    # расстояния в градусах считать нельзя, поэтому контуры переводим в метры
+    # вокруг центра карты и упрощаем уже в метрах (допуск 2 м)
+    lat0 = (BBOX[0] + BBOX[2]) / 2
+    kx = math.cos(math.radians(lat0)) * 111320.0
+    ky = 111320.0
     features = []
     for element in raw["elements"]:
         geometry = element.get("geometry") or []
-        if len(geometry) < 3:
+        if len(geometry) < 4:
             continue
-        coords = [(round(node["lat"], 6), round(node["lon"], 6)) for node in geometry]
-        coords = simplify(coords, tolerance=2.0)
-        if len(coords) < 3:
+        coords = [(node["lat"], node["lon"]) for node in geometry]
+        flat = [(lon * kx, lat * ky) for lat, lon in coords]
+        indices = simplify_indices(flat, tolerance=2.0)
+        if len(indices) < 3:
             continue
-        ring = [[lon, lat] for lat, lon in coords]
+        ring = [[round(coords[i][1], 6), round(coords[i][0], 6)] for i in indices]
         if ring[0] != ring[-1]:
             ring.append(ring[0])
         features.append({
@@ -327,15 +375,20 @@ def copy_text(source, target):
 
 def main():
     force = "--force" in sys.argv
+    force_buildings = force or "--force-buildings" in sys.argv
     fetch = "--skip-missing" not in sys.argv
     with_buildings = "--with-buildings" in sys.argv
+    buildings_grid = 4
+    for arg in sys.argv:
+        if arg.startswith("--buildings-grid="):
+            buildings_grid = max(1, int(arg.split("=", 1)[1]))
     os.makedirs(OUT, exist_ok=True)
 
     roads_raw = overpass(bbox_query('way["highway"]'), "roads", force, fetch)
     if not roads_raw:
         raise SystemExit("Нет данных по улицам — без них карта и маршруты невозможны.")
-    # здания — самый тяжёлый слой; тянем их только по явному запросу
-    buildings_raw = overpass(bbox_query('way["building"]'), "buildings", force, fetch) if with_buildings else None
+    # здания — самый тяжёлый слой; тянем их только по явному запросу, по плиткам
+    buildings_raw = fetch_buildings(buildings_grid, force_buildings, fetch) if with_buildings else None
     places_raw = overpass(bbox_query('node["place"]'), "places", force, fetch)
     addresses_raw = overpass(
         bbox_query('nwr["addr:housenumber"]["addr:street"]', output="out center;"),
@@ -343,6 +396,7 @@ def main():
 
     log("Строим слой улиц и граф дорог...")
     road_features, graph = build_roads(roads_raw)
+    major_roads, detail_roads = split_visual_roads(road_features)
 
     log("Строим слой зданий...")
     building_features = build_buildings(buildings_raw) if buildings_raw else []
@@ -353,6 +407,10 @@ def main():
 
     write_json(os.path.join(OUT, "map", "roads.geojson"),
                {"type": "FeatureCollection", "features": road_features})
+    write_json(os.path.join(OUT, "map", "roads-major.geojson"),
+               {"type": "FeatureCollection", "features": major_roads})
+    write_json(os.path.join(OUT, "map", "roads-detail.geojson"),
+               {"type": "FeatureCollection", "features": detail_roads})
     write_json(os.path.join(OUT, "map", "buildings.geojson"),
                {"type": "FeatureCollection", "features": building_features})
     write_json(os.path.join(OUT, "map", "places.geojson"),
@@ -377,6 +435,8 @@ def main():
         "bbox": [s, w, n, e],
         "counts": {
             "roads": len(road_features),
+            "roads_major": len(major_roads),
+            "roads_detail": len(detail_roads),
             "buildings": len(building_features),
             "places": len(place_features),
             "streets": len(streets),

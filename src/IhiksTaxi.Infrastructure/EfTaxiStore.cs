@@ -231,6 +231,44 @@ public sealed class EfTaxiStore : ITaxiStore
 			.ToList();
 	}
 
+	public async Task<IReadOnlyList<DriverMapPoint>> GetDriverMapPointsAsync(CancellationToken ct = default)
+	{
+		await using var db = await _factory.CreateDbContextAsync(ct);
+
+		var statusIds = await GetStatusIdsAsync(db, ct);
+		var completed = statusIds[TripStatusNames.Completed];
+		var cancelled = statusIds[TripStatusNames.Cancelled];
+
+		var rows = await (
+			from driver in db.Drivers
+			select new
+			{
+				DriverId = driver.Id,
+				driver.FullName,
+				Brand = driver.Vehicles.OrderBy(v => v.Id).Select(v => v.Brand).FirstOrDefault(),
+				Model = driver.Vehicles.OrderBy(v => v.Id).Select(v => v.Model).FirstOrDefault(),
+				Plate = driver.Vehicles.OrderBy(v => v.Id).Select(v => v.Plate).FirstOrDefault(),
+				CurrentLatitude = driver.CurrentStreet == null ? (decimal?)null : driver.CurrentStreet.Latitude,
+				CurrentLongitude = driver.CurrentStreet == null ? (decimal?)null : driver.CurrentStreet.Longitude,
+				HasActiveTrip = db.Trips.Any(t => t.DriverId == driver.Id
+					&& t.TripStatusId != completed
+					&& t.TripStatusId != cancelled),
+			}).ToListAsync(ct);
+
+		return rows
+			.Select(r => new DriverMapPoint
+			{
+				DriverId = r.DriverId,
+				Name = r.FullName,
+				Vehicle = r.Brand is null ? string.Empty : $"{r.Brand} {r.Model} · {r.Plate}",
+				HasActiveTrip = r.HasActiveTrip,
+				Point = r.CurrentLatitude is null || r.CurrentLongitude is null
+					? null
+					: new GeoPoint((double)r.CurrentLatitude.Value, (double)r.CurrentLongitude.Value),
+			})
+			.ToList();
+	}
+
 	public async Task<bool> TryAssignDriverAsync(int tripId, int driverId, CancellationToken ct = default)
 	{
 		await using var db = await _factory.CreateDbContextAsync(ct);
@@ -252,6 +290,17 @@ public sealed class EfTaxiStore : ITaxiStore
 				  AND other.trip_status_id NOT IN ({completed}, {cancelled}))", ct);
 
 		return affected == 1;
+	}
+
+	public async Task SetDriverStreetAsync(int driverId, int streetId, CancellationToken ct = default)
+	{
+		await using var db = await _factory.CreateDbContextAsync(ct);
+
+		var driver = await db.Drivers.FirstOrDefaultAsync(d => d.Id == driverId, ct)
+			?? throw new InvalidOperationException("Водитель не найден.");
+
+		driver.CurrentStreetId = streetId;
+		await db.SaveChangesAsync(ct);
 	}
 
 	public async Task SetStatusAsync(int tripId, string statusName, CancellationToken ct = default)

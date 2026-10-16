@@ -27,8 +27,14 @@ public interface ITaxiStore
 
 	Task<IReadOnlyList<DriverCandidate>> GetDriverCandidatesAsync(int tariffId, CancellationToken ct = default);
 
+	// водители с их текущим местоположением (улицей) для отображения машин на карте
+	Task<IReadOnlyList<DriverMapPoint>> GetDriverMapPointsAsync(CancellationToken ct = default);
+
 	// назначает водителя только если у него нет активной поездки; false — водителя уже заняли
 	Task<bool> TryAssignDriverAsync(int tripId, int driverId, CancellationToken ct = default);
+
+	// сохраняет новое положение водителя (улицу), например после завершения поездки
+	Task SetDriverStreetAsync(int driverId, int streetId, CancellationToken ct = default);
 
 	Task SetStatusAsync(int tripId, string statusName, CancellationToken ct = default);
 

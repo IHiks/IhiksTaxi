@@ -13,6 +13,7 @@ public partial class App : Microsoft.Maui.Controls.Application
 	public App(IServiceProvider services, SessionService session)
 	{
 		InitializeComponent();
+		UserAppTheme = AppTheme.Light;
 		_services = services;
 		_session = session;
 
@@ -34,10 +35,10 @@ public partial class App : Microsoft.Maui.Controls.Application
 	{
 		var window = base.CreateWindow(activationState);
 		window.Title = "IHIKS Taxi";
-		window.Width = 720;
-		window.Height = 960;
-		window.MinimumWidth = 560;
-		window.MinimumHeight = 640;
+		window.Width = 960;
+		window.Height = 720;
+		window.MinimumWidth = 760;
+		window.MinimumHeight = 620;
 		return window;
 	}
 

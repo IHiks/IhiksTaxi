@@ -35,6 +35,30 @@ public class TripServiceAddressTests
 		Assert.IsEmpty(results);
 	}
 
+	[Test]
+	public async Task SearchAddressesAsync_passes_parsed_street_and_house_to_geocoder()
+	{
+		var geocoder = new FakeGeocoder(Array.Empty<GeocodeResult>());
+		var service = CreateService(new FakeTaxiStore(), geocoder);
+
+		await service.SearchAddressesAsync("ул. Лежневская, 118");
+
+		Assert.AreEqual("ул. Лежневская", geocoder.LastStreet);
+		Assert.AreEqual("118", geocoder.LastHouse);
+	}
+
+	[Test]
+	public async Task SearchAddressesAsync_returns_empty_without_calling_geocoder_on_blank_query()
+	{
+		var geocoder = new FakeGeocoder(Array.Empty<GeocodeResult>());
+		var service = CreateService(new FakeTaxiStore(), geocoder);
+
+		var results = await service.SearchAddressesAsync("   ");
+
+		Assert.IsEmpty(results);
+		Assert.IsNull(geocoder.LastStreet);
+	}
+
 	private sealed class StubRouteService : IRouteService
 	{
 		public Task<RouteResult> GetRouteAsync(GeoPoint from, GeoPoint to, CancellationToken ct = default)
