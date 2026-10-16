@@ -6,18 +6,29 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
+    <Color x:Key="Primary">#FF8000</Color>
+    <Color x:Key="PrimaryDark">#E67300</Color>
+    <Color x:Key="PrimaryDarkText">#102A43</Color>
+    <Color x:Key="Secondary">#EAF2F8</Color>
+    <Color x:Key="SecondaryDarkText">#102A43</Color>
+    <Color x:Key="Tertiary">#102A43</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
+    <Color x:Key="Magenta">#486581</Color>
+    <Color x:Key="MidnightBlue">#102A43</Color>
     <Color x:Key="OffBlack">#1f1f1f</Color>
+
+    <!-- фирменные цвета IHIKS Taxi -->
+    <Color x:Key="BrandOrange">#FF8000</Color>
+    <Color x:Key="BrandDark">#102A43</Color>
+    <Color x:Key="BrandBlue">#486581</Color>
+    <Color x:Key="SoftBlue">#EAF2F8</Color>
+    <Color x:Key="PageBackground">#F7F9FC</Color>
+    <Color x:Key="HeaderBackground">#FFFFFF</Color>
+    <Color x:Key="MutedText">#627D98</Color>
+    <Color x:Key="CardBackground">#FFFFFF</Color>
+    <Color x:Key="StrokeColor">#D9E2EC</Color>
 
     <Color x:Key="Gray100">#E1E1E1</Color>
     <Color x:Key="Gray200">#C8C8C8</Color>

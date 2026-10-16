@@ -20,6 +20,11 @@
 		<!-- запуск без MSIX-упаковки, чтобы F5 работал сразу -->
 		<WindowsPackageType>None</WindowsPackageType>
 
+		<!-- WinUI 3 не умеет запускаться из папки с кириллицей в пути, поэтому
+		     собираем и запускаем готовое приложение из ASCII-папки C:\IhiksTaxiApp -->
+		<AppOutputRoot Condition="'$(AppOutputRoot)' == ''">$(SystemDrive)\IhiksTaxiApp</AppOutputRoot>
+		<BaseOutputPath>$(AppOutputRoot)\bin\</BaseOutputPath>
+
 		<!-- Display name -->
 		<ApplicationTitle>IHIKS Taxi</ApplicationTitle>
 
@@ -62,8 +67,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- офлайн-данные карты и маршрутов кладём рядом с приложением -->
+		<Content Include="offline-data\**\*" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
 	</ItemGroup>
 

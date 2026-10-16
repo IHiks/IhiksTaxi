@@ -17,6 +17,12 @@ public partial class App : MauiWinUIApplication
 	public App()
 	{
 		this.InitializeComponent();
+		this.UnhandledException += OnUnhandledException;
+	}
+
+	private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+	{
+		IhiksTaxi.UI.AppLog.Error("Необработанное исключение WinUI", e.Exception);
 	}
 
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

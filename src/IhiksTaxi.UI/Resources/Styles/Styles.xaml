@@ -6,6 +6,7 @@
     xmlns:conv="clr-namespace:IhiksTaxi.UI.Converters">
 
     <conv:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+    <conv:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
 
     <Style TargetType="ActivityIndicator">
         <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
@@ -96,7 +97,7 @@
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="FontFamily" Value="OpenSansRegular"/>
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray500}}" />
+        <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray500}}" />
         <Setter Property="MinimumHeightRequest" Value="44"/>
         <Setter Property="MinimumWidthRequest" Value="44"/>
         <Setter Property="VisualStateManager.VisualStateGroups">
@@ -208,7 +209,7 @@
 
     <Style TargetType="Picker">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-        <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray200}}" />
+        <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray200}}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="FontFamily" Value="OpenSansRegular"/>
         <Setter Property="FontSize" Value="14"/>
@@ -425,6 +426,120 @@
         <Setter Property="BarTextColor" Value="{AppThemeBinding Light={StaticResource Magenta}, Dark={StaticResource White}}" />
         <Setter Property="UnselectedTabColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray950}}" />
         <Setter Property="SelectedTabColor" Value="{AppThemeBinding Light={StaticResource Gray950}, Dark={StaticResource Gray200}}" />
+    </Style>
+
+    <!-- стили IHIKS Taxi -->
+    <Style TargetType="Label" x:Key="LogoOrange">
+        <Setter Property="TextColor" Value="{StaticResource BrandOrange}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="LogoDark">
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="SectionTitle">
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="CardTitle">
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="FieldLabel">
+        <Setter Property="TextColor" Value="{StaticResource MutedText}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="BodyText">
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="MutedLabel">
+        <Setter Property="TextColor" Value="{StaticResource MutedText}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style TargetType="Label" x:Key="PriceText">
+        <Setter Property="TextColor" Value="{StaticResource BrandOrange}" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style TargetType="Button" x:Key="NavButton">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="6,8" />
+    </Style>
+
+    <Style TargetType="Button" x:Key="PrimaryButton">
+        <Setter Property="BackgroundColor" Value="{StaticResource BrandOrange}" />
+        <Setter Property="TextColor" Value="{StaticResource White}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="16,12" />
+    </Style>
+
+    <Style TargetType="Button" x:Key="SecondaryButton">
+        <Setter Property="BackgroundColor" Value="{StaticResource SoftBlue}" />
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="14,10" />
+    </Style>
+
+    <Style TargetType="Border" x:Key="Card">
+        <Setter Property="Stroke" Value="{StaticResource StrokeColor}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CardBackground}" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style TargetType="Border" x:Key="FieldBorder">
+        <Setter Property="Stroke" Value="{StaticResource StrokeColor}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="BackgroundColor" Value="{StaticResource White}" />
+        <Setter Property="Padding" Value="12,4" />
+    </Style>
+
+    <Style TargetType="Border" x:Key="AddressRow">
+        <Setter Property="Stroke" Value="{StaticResource StrokeColor}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="BackgroundColor" Value="{StaticResource White}" />
+        <Setter Property="Padding" Value="10,8" />
+    </Style>
+
+    <Style TargetType="Border" x:Key="AddressMarker">
+        <Setter Property="Stroke" Value="Transparent" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="BackgroundColor" Value="{StaticResource SoftBlue}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="WidthRequest" Value="34" />
+        <Setter Property="HeightRequest" Value="34" />
+    </Style>
+
+    <Style TargetType="Button" x:Key="TariffButton">
+        <Setter Property="BackgroundColor" Value="{StaticResource SoftBlue}" />
+        <Setter Property="TextColor" Value="{StaticResource BrandDark}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="4,12" />
     </Style>
 
 </ResourceDictionary>

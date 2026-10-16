@@ -1,3 +1,4 @@
+using IhiksTaxi.Application;
 using IhiksTaxi.Infrastructure;
 using Microsoft.Extensions.Logging;
 
@@ -21,8 +22,15 @@ public static class MauiProgram
 #endif
 
 		builder.Services.AddInfrastructure();
-		builder.Services.AddSingleton<MainViewModel>();
-		builder.Services.AddSingleton<MainPage>();
+		builder.Services.AddSingleton(_ => new MapServer(OfflineData.Root(LocalSettings.Load())));
+		builder.Services.AddSingleton<RouteMapPresenter>();
+		builder.Services.AddSingleton<SessionService>();
+		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<TripService>();
+		builder.Services.AddTransient<AuthViewModel>();
+		builder.Services.AddTransient<LoginPage>();
+		builder.Services.AddTransient<MainViewModel>();
+		builder.Services.AddTransient<MainPage>();
 
 		return builder.Build();
 	}

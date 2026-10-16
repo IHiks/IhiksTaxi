@@ -9,5 +9,5 @@ public class Rating
 	public int Rate { get; set; }
 
 	public Driver Driver { get; set; } = null!;
-	public Trip Trip { get; set; } = null!;
+	public Trip? Trip { get; set; }
 }

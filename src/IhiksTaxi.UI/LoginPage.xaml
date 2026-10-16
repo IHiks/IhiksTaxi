@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="IhiksTaxi.UI.LoginPage"
+             BackgroundColor="{StaticResource PageBackground}">
+
+    <ScrollView x:Name="Scroller">
+        <VerticalStackLayout x:Name="FormContent" Padding="24,32" Spacing="20"
+                             HorizontalOptions="Fill"
+                             MaximumWidthRequest="400">
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="6">
+                <Label Text="IHIKS" Style="{StaticResource LogoOrange}" />
+                <Label Text="ТАКСИ" Style="{StaticResource LogoDark}" />
+            </HorizontalStackLayout>
+
+            <Label Text="Система заказа такси"
+                   Style="{StaticResource MutedLabel}"
+                   HorizontalOptions="Center" />
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="16">
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Text="Вход"
+                                Command="{Binding ShowLoginCommand}"
+                                BackgroundColor="{StaticResource SoftBlue}"
+                                TextColor="{StaticResource BrandDark}"
+                                CornerRadius="10">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource BrandOrange}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Text="Регистрация"
+                                Command="{Binding ShowRegisterCommand}"
+                                BackgroundColor="{StaticResource SoftBlue}"
+                                TextColor="{StaticResource BrandDark}"
+                                CornerRadius="10">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsRegisterMode}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource BrandOrange}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="4" IsVisible="{Binding IsRegisterMode}">
+                        <Label Text="Имя" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource FieldBorder}">
+                            <Entry Text="{Binding FullName}" Placeholder="Как к вам обращаться" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Телефон" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource FieldBorder}">
+                            <Entry Text="{Binding Phone}" Placeholder="+7 900 000-00-00" Keyboard="Telephone" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Пароль" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource FieldBorder}">
+                            <Entry Text="{Binding Password}" Placeholder="не короче 6 символов" IsPassword="True" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4" IsVisible="{Binding IsRegisterMode}">
+                        <Label Text="Повтор пароля" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource FieldBorder}">
+                            <Entry Text="{Binding ConfirmPassword}" Placeholder="повторите пароль" IsPassword="True" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Button Text="{Binding ActionLabel}"
+                            IsVisible="{Binding IsRegisterMode}"
+                            IsEnabled="{Binding CanSubmit}"
+                            Command="{Binding RegisterCommand}"
+                            Style="{StaticResource PrimaryButton}" />
+
+                    <Button Text="Войти"
+                            IsVisible="{Binding IsRegisterMode, Converter={StaticResource InvertedBoolConverter}}"
+                            IsEnabled="{Binding CanSubmit}"
+                            Command="{Binding LoginCommand}"
+                            Style="{StaticResource PrimaryButton}" />
+
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{StaticResource BrandOrange}"
+                           IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotEmptyConverter}}" />
+
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
+                                       Color="{StaticResource BrandOrange}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Пароль хранится только в виде хеша. Данные хранятся в PostgreSQL."
+                   Style="{StaticResource MutedLabel}"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

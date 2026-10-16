@@ -16,6 +16,7 @@ public class IhiksTaxiDbContext : DbContext
 	public DbSet<TripStatus> TripStatuses => Set<TripStatus>();
 	public DbSet<Tariff> Tariffs => Set<Tariff>();
 	public DbSet<Rating> Ratings => Set<Rating>();
+	public DbSet<Street> Streets => Set<Street>();
 
 	// все имена таблиц и колонок — как в учебной БД IhiksTaxi (snake_case, из скрипта ЛР1)
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -29,7 +30,11 @@ public class IhiksTaxiDbContext : DbContext
 			e.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(20).IsRequired();
 			e.Property(x => x.ExperienceYears).HasColumnName("experience_years").IsRequired();
 			e.Property(x => x.Category).HasColumnName("category").HasMaxLength(10).IsRequired();
+			e.Property(x => x.CurrentStreetId).HasColumnName("current_street_id");
 			e.ToTable(t => t.HasCheckConstraint("CK_driver_experience", "experience_years >= 1 AND experience_years <= 60"));
+			e.HasOne(x => x.CurrentStreet).WithMany()
+				.HasForeignKey(x => x.CurrentStreetId).HasConstraintName("FK_driver_street")
+				.OnDelete(DeleteBehavior.SetNull);
 		});
 
 		modelBuilder.Entity<Vehicle>(e =>
@@ -59,9 +64,11 @@ public class IhiksTaxiDbContext : DbContext
 			e.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
 			e.Property(x => x.FullName).HasColumnName("full_name").HasMaxLength(120).IsRequired();
 			e.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(20).IsRequired();
+			e.Property(x => x.PhoneNormalized).HasColumnName("phone_normalized").HasMaxLength(20);
 			e.Property(x => x.Email).HasColumnName("email").HasMaxLength(120);
 			e.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(256);
 			e.HasIndex(x => x.Email).IsUnique().HasDatabaseName("Passenger_IX_Email");
+			e.HasIndex(x => x.PhoneNormalized).IsUnique().HasDatabaseName("Passenger_IX_PhoneNormalized");
 		});
 
 		modelBuilder.Entity<Trip>(e =>
@@ -78,6 +85,7 @@ public class IhiksTaxiDbContext : DbContext
 			e.Property(x => x.CreatedAt).HasColumnName("trip_date").HasColumnType("timestamp without time zone").IsRequired();
 			e.Property(x => x.DurationMin).HasColumnName("duration_min");
 			e.Property(x => x.TripStatusId).HasColumnName("trip_status_id").IsRequired();
+			e.Property(x => x.TariffId).HasColumnName("tariff_id").IsRequired();
 			e.ToTable(t =>
 			{
 				t.HasCheckConstraint("CK_trip_cost", "cost >= 0");
@@ -93,6 +101,9 @@ public class IhiksTaxiDbContext : DbContext
 				.OnDelete(DeleteBehavior.NoAction);
 			e.HasOne(x => x.TripStatus).WithMany(s => s.Trips)
 				.HasForeignKey(x => x.TripStatusId).HasConstraintName("FK_trip_trip_status")
+				.OnDelete(DeleteBehavior.Restrict);
+			e.HasOne(x => x.Tariff).WithMany()
+				.HasForeignKey(x => x.TariffId).HasConstraintName("FK_trip_tariff")
 				.OnDelete(DeleteBehavior.Restrict);
 		});
 
@@ -116,6 +127,17 @@ public class IhiksTaxiDbContext : DbContext
 			e.Property(x => x.RatePerMinute).HasColumnName("rate_per_minute").HasColumnType("numeric(10,2)").IsRequired();
 			e.Property(x => x.DemandFactorDefault).HasColumnName("demand_factor_default").HasColumnType("numeric(4,2)").IsRequired();
 			e.HasIndex(x => x.Name).IsUnique().HasDatabaseName("Tariff_IX_Name");
+		});
+
+		modelBuilder.Entity<Street>(e =>
+		{
+			e.ToTable("street");
+			e.HasKey(x => x.Id).HasName("PK_street");
+			e.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
+			e.Property(x => x.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+			e.Property(x => x.Latitude).HasColumnName("latitude").HasColumnType("numeric(9,6)").IsRequired();
+			e.Property(x => x.Longitude).HasColumnName("longitude").HasColumnType("numeric(9,6)").IsRequired();
+			e.HasIndex(x => x.Name).IsUnique().HasDatabaseName("Street_IX_Name");
 		});
 
 		modelBuilder.Entity<Rating>(e =>

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IhiksTaxi.Infrastructure.Migrations
 {
     [DbContext(typeof(IhiksTaxiDbContext))]
-    [Migration("20260922190146_InitSchema")]
-    partial class InitSchema
+    [Migration("20261014113920_AddStreetsAndPassengerPhone")]
+    partial class AddStreetsAndPassengerPhone
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -40,6 +40,10 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("category");
 
+                    b.Property<int?>("CurrentStreetId")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_street_id");
+
                     b.Property<int>("ExperienceYears")
                         .HasColumnType("integer")
                         .HasColumnName("experience_years");
@@ -58,6 +62,8 @@ namespace IhiksTaxi.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("PK_driver");
+
+                    b.HasIndex("CurrentStreetId");
 
                     b.ToTable("driver", null, t =>
                         {
@@ -96,12 +102,21 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("PhoneNormalized")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone_normalized");
+
                     b.HasKey("Id")
                         .HasName("PK_passenger");
 
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("Passenger_IX_Email");
+
+                    b.HasIndex("PhoneNormalized")
+                        .IsUnique()
+                        .HasDatabaseName("Passenger_IX_PhoneNormalized");
 
                     b.ToTable("passenger", (string)null);
                 });
@@ -141,6 +156,39 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_rating_rate", "rate >= 1 AND rate <= 5");
                         });
+                });
+
+            modelBuilder.Entity("IhiksTaxi.Domain.Street", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("numeric(9,6)")
+                        .HasColumnName("latitude");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("numeric(9,6)")
+                        .HasColumnName("longitude");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("PK_street");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("Street_IX_Name");
+
+                    b.ToTable("street", (string)null);
                 });
 
             modelBuilder.Entity("IhiksTaxi.Domain.Tariff", b =>
@@ -223,6 +271,10 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("passenger_id");
 
+                    b.Property<int>("TariffId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tariff_id");
+
                     b.Property<string>("ToAddress")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -241,6 +293,8 @@ namespace IhiksTaxi.Infrastructure.Migrations
 
                     b.HasIndex("PassengerId")
                         .HasDatabaseName("Trip_IX_PassengerId");
+
+                    b.HasIndex("TariffId");
 
                     b.HasIndex("TripStatusId");
 
@@ -329,6 +383,17 @@ namespace IhiksTaxi.Infrastructure.Migrations
                     b.ToTable("vehicle", (string)null);
                 });
 
+            modelBuilder.Entity("IhiksTaxi.Domain.Driver", b =>
+                {
+                    b.HasOne("IhiksTaxi.Domain.Street", "CurrentStreet")
+                        .WithMany()
+                        .HasForeignKey("CurrentStreetId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_driver_street");
+
+                    b.Navigation("CurrentStreet");
+                });
+
             modelBuilder.Entity("IhiksTaxi.Domain.Rating", b =>
                 {
                     b.HasOne("IhiksTaxi.Domain.Driver", "Driver")
@@ -364,6 +429,13 @@ namespace IhiksTaxi.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_trip_passenger");
 
+                    b.HasOne("IhiksTaxi.Domain.Tariff", "Tariff")
+                        .WithMany()
+                        .HasForeignKey("TariffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_trip_tariff");
+
                     b.HasOne("IhiksTaxi.Domain.TripStatus", "TripStatus")
                         .WithMany("Trips")
                         .HasForeignKey("TripStatusId")
@@ -374,6 +446,8 @@ namespace IhiksTaxi.Infrastructure.Migrations
                     b.Navigation("Driver");
 
                     b.Navigation("Passenger");
+
+                    b.Navigation("Tariff");
 
                     b.Navigation("TripStatus");
                 });

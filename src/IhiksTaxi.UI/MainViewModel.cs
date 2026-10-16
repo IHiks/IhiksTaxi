@@ -1,91 +1,84 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
-using IhiksTaxi.Domain;
-using IhiksTaxi.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+using IhiksTaxi.Application;
 
 namespace IhiksTaxi.UI;
 
-public class MainViewModel : INotifyPropertyChanged
+public class MainViewModel : ObservableObject
 {
-	private readonly IhiksTaxiDbContext _db;
-	private bool _isBusy;
-
-	public MainViewModel(IhiksTaxiDbContext db)
+	private enum Section
 	{
-		_db = db;
-		RefreshCommand = new Command(async () => await LoadAsync());
-		_ = LoadAsync();
+		Order,
+		Profile,
+		Settings,
 	}
 
-	public ICommand RefreshCommand { get; }
+	private readonly SessionService _session;
+	private Section _section = Section.Order;
 
-	public ObservableCollection<Tariff> Tariffs { get; } = new();
-
-	private int _driversCount;
-	public int DriversCount
+	public MainViewModel(TripService service, SessionService session, RouteMapPresenter map)
 	{
-		get => _driversCount;
-		set => Set(ref _driversCount, value);
+		_session = session;
+		Order = new OrderViewModel(service, session, map);
+		Profile = new ProfileViewModel(service, session);
+		Settings = new SettingsViewModel(service);
+
+		ShowOrderCommand = new Command(() => Select(Section.Order));
+		ShowProfileCommand = new Command(() => Select(Section.Profile));
+		ShowSettingsCommand = new Command(() => Select(Section.Settings));
+		LogoutCommand = new Command(() => _session.SignOut());
+
+		MainThread.BeginInvokeOnMainThread(async () => await Order.ActivateAsync());
 	}
 
-	private int _tripsCount;
-	public int TripsCount
+	public OrderViewModel Order { get; }
+	public ProfileViewModel Profile { get; }
+	public SettingsViewModel Settings { get; }
+
+	public ICommand ShowOrderCommand { get; }
+	public ICommand ShowProfileCommand { get; }
+	public ICommand ShowSettingsCommand { get; }
+	public ICommand LogoutCommand { get; }
+
+	private Thickness _contentMargin = new(24, 20);
+	public Thickness ContentMargin
 	{
-		get => _tripsCount;
-		set => Set(ref _tripsCount, value);
+		get => _contentMargin;
+		private set => Set(ref _contentMargin, value);
 	}
 
-	private string? _statusMessage;
-	public string? StatusMessage
+	private bool _showSubtitle = true;
+	public bool ShowSubtitle
 	{
-		get => _statusMessage;
-		set => Set(ref _statusMessage, value);
+		get => _showSubtitle;
+		private set => Set(ref _showSubtitle, value);
 	}
 
-	public bool IsBusy
+	// на широком окне контент остаётся узкой читаемой колонкой по центру, на узком — прижимается к краям
+	public void ApplyWidth(double width)
 	{
-		get => _isBusy;
-		set => Set(ref _isBusy, value);
-	}
-
-	public async Task LoadAsync()
-	{
-		if (IsBusy)
+		if (width <= 0)
 			return;
 
-		IsBusy = true;
-		try
-		{
-			DriversCount = await _db.Drivers.CountAsync();
-			TripsCount = await _db.Trips.CountAsync();
-
-			Tariffs.Clear();
-			foreach (var tariff in await _db.Tariffs.OrderBy(t => t.Id).ToListAsync())
-				Tariffs.Add(tariff);
-
-			StatusMessage = "Данные загружены из PostgreSQL";
-		}
-		catch (Exception ex)
-		{
-			StatusMessage = "Ошибка подключения к БД: " + ex.Message;
-		}
-		finally
-		{
-			IsBusy = false;
-		}
+		double side = width < 620 ? 12 : Math.Max(24, (width - 620) / 2);
+		ContentMargin = new Thickness(side, width < 620 ? 12 : 20);
+		ShowSubtitle = width >= 720;
 	}
 
-	public event PropertyChangedEventHandler? PropertyChanged;
+	public bool ShowOrder => _section == Section.Order;
+	public bool ShowProfile => _section == Section.Profile;
+	public bool ShowSettings => _section == Section.Settings;
 
-	private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
+	private void Select(Section section)
 	{
-		if (EqualityComparer<T>.Default.Equals(field, value))
-			return;
+		_section = section;
+		OnPropertyChanged(nameof(ShowOrder));
+		OnPropertyChanged(nameof(ShowProfile));
+		OnPropertyChanged(nameof(ShowSettings));
 
-		field = value;
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+		if (section == Section.Profile)
+			_ = Profile.RefreshAsync();
+		else if (section == Section.Order)
+			_ = Order.LoadActiveTripAsync();
 	}
 }

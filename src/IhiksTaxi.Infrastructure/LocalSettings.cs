@@ -12,6 +12,12 @@ public sealed class LocalSettings
 	public string Username { get; set; } = "postgres";
 	public string Password { get; set; } = string.Empty;
 
+	// "offline" — карта и маршруты из локальных данных, "online" — внешние сервисы OSRM/Photon
+	public string RoutingMode { get; set; } = "offline";
+
+	// пусто — папка offline-data рядом с приложением
+	public string OfflineDataPath { get; set; } = string.Empty;
+
 	public string BuildConnectionString() =>
 		$"Host={Host};Port={Port};Database={Database};Username={Username};Password={Password}";
 

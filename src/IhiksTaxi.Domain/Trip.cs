@@ -14,9 +14,11 @@ public class Trip
 	public DateTime CreatedAt { get; set; }
 	public int? DurationMin { get; set; }
 	public int TripStatusId { get; set; }
+	public int TariffId { get; set; }
 
 	public Passenger Passenger { get; set; } = null!;
 	public Driver? Driver { get; set; }
 	public TripStatus TripStatus { get; set; } = null!;
+	public Tariff Tariff { get; set; } = null!;
 	public Rating? Rating { get; set; }
 }

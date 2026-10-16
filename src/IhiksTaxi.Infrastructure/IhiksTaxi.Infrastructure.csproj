@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IhiksTaxi.Domain\IhiksTaxi.Domain.csproj" />
+    <ProjectReference Include="..\IhiksTaxi.Application\IhiksTaxi.Application.csproj" />
   </ItemGroup>
 
 </Project>

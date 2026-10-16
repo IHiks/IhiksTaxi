@@ -6,5 +6,6 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = viewModel;
+		SizeChanged += (_, _) => viewModel.ApplyWidth(Width);
 	}
 }
