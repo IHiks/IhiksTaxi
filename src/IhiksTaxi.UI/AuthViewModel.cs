@@ -104,6 +104,7 @@ public class AuthViewModel : ObservableObject
 		}
 		catch (Exception ex)
 		{
+			AppLog.Error("Вход не выполнен", ex);
 			ErrorMessage = ErrorText.Describe(ex);
 		}
 		finally
@@ -126,6 +127,7 @@ public class AuthViewModel : ObservableObject
 		}
 		catch (Exception ex)
 		{
+			AppLog.Error("Регистрация не выполнена", ex);
 			ErrorMessage = ErrorText.Describe(ex);
 		}
 		finally
