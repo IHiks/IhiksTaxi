@@ -9,7 +9,13 @@ public partial class LoginPage : ContentPage
 		SizeChanged += (_, _) => CenterForm();
 		Scroller.SizeChanged += (_, _) => CenterForm();
 		FormContent.SizeChanged += (_, _) => CenterForm();
-		Loaded += (_, _) => WindowChrome.Attach(AppHeader, UpdateMaximizeGlyph);
+		Loaded += (_, _) =>
+		{
+			WindowChrome.Attach(AppHeader, UpdateMaximizeGlyph);
+			WindowChrome.TieWindowButtons(AppHeader, MinimizeButton, MaximizeButton, CloseButton);
+		};
+
+		Unloaded += (_, _) => WindowChrome.UntieWindowButtons(AppHeader);
 	}
 
 	// системные кнопки окна заменены своими, поэтому за разворотом следим сами

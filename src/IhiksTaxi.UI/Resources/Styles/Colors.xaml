@@ -64,6 +64,20 @@
     <Color x:Key="DisabledBackgroundDark">#232D36</Color>
     <Color x:Key="DisabledTextDark">#6C7A87</Color>
 
+    <!-- подсветка кнопок окна: цвета парные, чтобы код брал их по теме -->
+    <Color x:Key="WindowButtonHover">#EFEFEC</Color>
+    <Color x:Key="WindowButtonHoverDark">#21303C</Color>
+    <Color x:Key="WindowButtonHoverForeground">#191A17</Color>
+    <Color x:Key="WindowButtonHoverForegroundDark">#E7EDF2</Color>
+    <Color x:Key="WindowButtonPressed">#E2E1DD</Color>
+    <Color x:Key="WindowButtonPressedDark">#2A3A47</Color>
+    <Color x:Key="WindowCloseHover">#E81123</Color>
+    <Color x:Key="WindowCloseHoverDark">#E81123</Color>
+    <Color x:Key="WindowClosePressed">#C50F1F</Color>
+    <Color x:Key="WindowClosePressedDark">#C50F1F</Color>
+    <Color x:Key="WindowCloseForeground">#FFFFFF</Color>
+    <Color x:Key="WindowCloseForegroundDark">#FFFFFF</Color>
+
     <!-- статусы -->
     <Color x:Key="SuccessText">#1F7A4C</Color>
     <Color x:Key="SuccessTextDark">#6FD3A2</Color>

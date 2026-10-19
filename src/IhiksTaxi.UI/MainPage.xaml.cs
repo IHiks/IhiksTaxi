@@ -18,11 +18,16 @@ public partial class MainPage : ContentPage
 		Loaded += (_, _) =>
 		{
 			WindowChrome.Attach(AppHeader, UpdateMaximizeGlyph);
+			WindowChrome.TieWindowButtons(AppHeader, MinimizeButton, MaximizeButton, CloseButton);
 			ThemeService.Changed += ApplyMapTheme;
 			ApplyMapTheme();
 		};
 
-		Unloaded += (_, _) => ThemeService.Changed -= ApplyMapTheme;
+		Unloaded += (_, _) =>
+		{
+			ThemeService.Changed -= ApplyMapTheme;
+			WindowChrome.UntieWindowButtons(AppHeader);
+		};
 	}
 
 	// системные кнопки окна заменены своими, поэтому за разворотом следим сами
