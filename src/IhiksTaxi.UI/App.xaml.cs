@@ -38,7 +38,7 @@ public partial class App : Microsoft.Maui.Controls.Application
 		window.Width = 960;
 		window.Height = 720;
 		window.MinimumWidth = 760;
-		window.MinimumHeight = 620;
+		window.MinimumHeight = 670;
 		return window;
 	}
 
