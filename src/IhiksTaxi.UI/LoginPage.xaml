@@ -6,6 +6,9 @@
 
     <Grid RowDefinitions="Auto,*">
 
+        <!-- фоновые геометрические фигуры -->
+        <GraphicsView Grid.RowSpan="2" Drawable="{StaticResource BackgroundDecor}" InputTransparent="True" />
+
         <!-- своя шапка окна: до входа в аккаунт видны только кнопки окна -->
         <Grid x:Name="AppHeader" Grid.Row="0" Padding="16,0" HeightRequest="46">
             <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Center" Spacing="2">

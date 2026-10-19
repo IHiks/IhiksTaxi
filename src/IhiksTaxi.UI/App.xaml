@@ -9,6 +9,9 @@
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- фоновые геометрические фигуры для страниц -->
+            <local:BackgroundDecorDrawable x:Key="BackgroundDecor" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

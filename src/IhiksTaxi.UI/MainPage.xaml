@@ -7,6 +7,9 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
 
+        <!-- фоновые геометрические фигуры -->
+        <GraphicsView Grid.RowSpan="3" Drawable="{StaticResource BackgroundDecor}" InputTransparent="True" />
+
         <!-- верхняя плашка: она же заголовок окна, поэтому несёт кнопки окна -->
         <Grid x:Name="AppHeader" Grid.Row="0" Padding="16,0" HeightRequest="54"
               BackgroundColor="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}">
