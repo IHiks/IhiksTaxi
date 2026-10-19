@@ -13,7 +13,7 @@ public partial class App : Microsoft.Maui.Controls.Application
 	public App(IServiceProvider services, SessionService session)
 	{
 		InitializeComponent();
-		UserAppTheme = AppTheme.Light;
+		ThemeService.Initialize(this);
 		_services = services;
 		_session = session;
 
@@ -38,7 +38,7 @@ public partial class App : Microsoft.Maui.Controls.Application
 		window.Width = 960;
 		window.Height = 720;
 		window.MinimumWidth = 760;
-		window.MinimumHeight = 670;
+		window.MinimumHeight = 660;
 		return window;
 	}
 

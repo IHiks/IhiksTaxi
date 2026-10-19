@@ -13,9 +13,23 @@ public class SettingsViewModel : ObservableObject
 	{
 		_service = service;
 		CheckConnectionCommand = new Command(async () => await CheckConnectionAsync());
+		UseLightThemeCommand = new Command(() => SetTheme(false));
+		UseDarkThemeCommand = new Command(() => SetTheme(true));
 	}
 
 	public ICommand CheckConnectionCommand { get; }
+	public ICommand UseLightThemeCommand { get; }
+	public ICommand UseDarkThemeCommand { get; }
+
+	public bool UseLightTheme => !ThemeService.IsDark;
+	public bool UseDarkTheme => ThemeService.IsDark;
+
+	private void SetTheme(bool dark)
+	{
+		ThemeService.SetDark(dark);
+		OnPropertyChanged(nameof(UseLightTheme));
+		OnPropertyChanged(nameof(UseDarkTheme));
+	}
 
 	public string ApplicationName => "IHIKS Taxi";
 	public string Description => "Учебный проект: система заказа такси.";

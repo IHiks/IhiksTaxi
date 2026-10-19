@@ -1,21 +1,31 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:IhiksTaxi.UI"
              x:Class="IhiksTaxi.UI.MainPage"
-             BackgroundColor="{StaticResource PageBackground}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
 
     <Grid RowDefinitions="Auto,*,Auto">
 
-        <!-- верхняя плашка с логотипом -->
-        <Grid Grid.Row="0" Padding="24,14" BackgroundColor="{StaticResource HeaderBackground}">
+        <!-- верхняя плашка: она же заголовок окна, поэтому несёт кнопки окна -->
+        <Grid x:Name="AppHeader" Grid.Row="0" Padding="16,0" HeightRequest="54"
+              BackgroundColor="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}">
             <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="6">
                 <Label Text="IHIKS" Style="{StaticResource LogoOrange}" />
                 <Label Text="ТАКСИ" Style="{StaticResource LogoDark}" />
             </HorizontalStackLayout>
+
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Center" Spacing="2">
+                <Button x:Name="MinimizeButton" Text="&#xE921;" Style="{StaticResource WindowButton}"
+                        Clicked="OnMinimizeClicked" ToolTipProperties.Text="Свернуть" />
+                <Button x:Name="MaximizeButton" Text="&#xE922;" Style="{StaticResource WindowButton}"
+                        Clicked="OnMaximizeClicked" ToolTipProperties.Text="Развернуть" />
+                <Button x:Name="CloseButton" Text="&#xE8BB;" Style="{StaticResource WindowCloseButton}"
+                        Clicked="OnCloseClicked" ToolTipProperties.Text="Закрыть" />
+            </HorizontalStackLayout>
         </Grid>
         <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1"
-                 Color="{StaticResource StrokeColor}" />
+                 Color="{AppThemeBinding Light={StaticResource StrokeColor}, Dark={StaticResource StrokeColorDark}}" />
 
         <!-- рабочая область -->
         <Grid Grid.Row="1">
@@ -47,7 +57,7 @@
                                      HorizontalOptions="Fill" VerticalOptions="Fill" />
                             <Border Margin="12" Padding="8,6"
                                     HorizontalOptions="Start" VerticalOptions="End"
-                                    BackgroundColor="{StaticResource SoftBlue}" Stroke="{StaticResource StrokeColor}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftBlue}, Dark={StaticResource SoftBlueDark}}" Stroke="{AppThemeBinding Light={StaticResource StrokeColor}, Dark={StaticResource StrokeColorDark}}"
                                     StrokeThickness="1" StrokeShape="RoundRectangle 6"
                                     IsVisible="{Binding Order.MapNote, Converter={StaticResource IsNotEmptyConverter}}">
                                 <Label Text="{Binding Order.MapNote}" Style="{StaticResource MutedLabel}" />
@@ -86,7 +96,7 @@
                                                                      BindableLayout.ItemsSource="{Binding Order.FromSuggestions}">
                                                     <BindableLayout.ItemTemplate>
                                                         <DataTemplate>
-                                                            <Grid Padding="8,6" BackgroundColor="{StaticResource PageBackground}">
+                                                            <Grid Padding="8,6" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
                                                                 <Grid.GestureRecognizers>
                                                                     <TapGestureRecognizer
                                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}, Mode=FindAncestorBindingContext}, Path=Order.SelectFromCommand}"
@@ -125,7 +135,7 @@
                                                                      BindableLayout.ItemsSource="{Binding Order.ToSuggestions}">
                                                     <BindableLayout.ItemTemplate>
                                                         <DataTemplate>
-                                                            <Grid Padding="8,6" BackgroundColor="{StaticResource PageBackground}">
+                                                            <Grid Padding="8,6" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
                                                                 <Grid.GestureRecognizers>
                                                                     <TapGestureRecognizer
                                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}, Mode=FindAncestorBindingContext}, Path=Order.SelectToCommand}"
@@ -189,7 +199,7 @@
                                            FontSize="20" FontAttributes="Bold" />
                                     <Label Text="{Binding Order.DistanceText}" Style="{StaticResource MutedLabel}" />
                                 </VerticalStackLayout>
-                                <BoxView Grid.Column="1" Color="{StaticResource TileBorder}" />
+                                <BoxView Grid.Column="1" Color="{AppThemeBinding Light={StaticResource TileBorder}, Dark={StaticResource TileBorderDark}}" />
                                 <VerticalStackLayout Grid.Column="2" Padding="14,12" Spacing="2">
                                     <Label Text="ОЦЕНКА СТОИМОСТИ" Style="{StaticResource FieldLabel}" />
                                     <Label Text="{Binding Order.EstimateText}" Style="{StaticResource PriceText}" />
@@ -218,7 +228,7 @@
                         <Border Style="{StaticResource ActiveTripPanel}" Padding="16">
                             <VerticalStackLayout Spacing="14">
                                 <Label Text="{Binding Order.ActiveStatusText}" FontSize="20"
-                                       FontAttributes="Bold" TextColor="{StaticResource BrandDark}" />
+                                       FontAttributes="Bold" TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
                                 <Label Text="{Binding Order.ActiveTariffText}" Style="{StaticResource MutedLabel}" />
 
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"
@@ -230,19 +240,19 @@
                                     </Border>
                                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                         <Label Text="{Binding Order.ActiveDriverName}" FontSize="16"
-                                               FontAttributes="Bold" TextColor="{StaticResource BrandDark}"
+                                               FontAttributes="Bold" TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                                                LineBreakMode="TailTruncation" MaxLines="1" />
                                         <Label Text="{Binding Order.ActiveDriverPhone}" Style="{StaticResource MutedLabel}" />
                                     </VerticalStackLayout>
                                 </Grid>
 
-                                <Border BackgroundColor="{StaticResource OrangeSurface}"
-                                        Stroke="{StaticResource TileBorder}" StrokeThickness="1"
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource OrangeSurface}, Dark={StaticResource OrangeSurfaceDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource TileBorder}, Dark={StaticResource TileBorderDark}}" StrokeThickness="1"
                                         StrokeShape="RoundRectangle 12" Padding="14,12"
                                         IsVisible="{Binding Order.HasDriver}">
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                         <Border Grid.Column="0" WidthRequest="34" HeightRequest="34"
-                                                Stroke="{StaticResource ColorDotBorder}" StrokeThickness="1"
+                                                Stroke="{AppThemeBinding Light={StaticResource ColorDotBorder}, Dark={StaticResource ColorDotBorderDark}}" StrokeThickness="1"
                                                 StrokeShape="RoundRectangle 17"
                                                 BackgroundColor="{Binding Order.ActiveVehicleColorSwatch}"
                                                 VerticalOptions="Center" />
@@ -262,7 +272,7 @@
                                            LineBreakMode="TailTruncation" MaxLines="2" />
                                 </Grid>
 
-                                <BoxView HeightRequest="1" Color="{StaticResource TileBorder}" />
+                                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource TileBorder}, Dark={StaticResource TileBorderDark}}" />
 
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Grid.Column="0" Text="К оплате" Style="{StaticResource BodyText}"
@@ -300,7 +310,7 @@
                                 <Label Text="Оцените водителя" Style="{StaticResource CardTitle}"
                                        TextColor="{StaticResource BrandOrange}" />
                                 <Label Text="Оценка сохранится сразу после выбора."
-                                       Style="{StaticResource MutedLabel}" TextColor="{StaticResource SoftOrange}" />
+                                       Style="{StaticResource MutedLabel}" TextColor="{AppThemeBinding Light={StaticResource SoftOrange}, Dark={StaticResource AccentLight}}" />
                                 <HorizontalStackLayout Spacing="8">
                                     <Button Text="1" Command="{Binding Order.RateCommand}" CommandParameter="1" Style="{StaticResource RatingButton}" />
                                     <Button Text="2" Command="{Binding Order.RateCommand}" CommandParameter="2" Style="{StaticResource RatingButton}" />
@@ -317,7 +327,7 @@
                 </Grid>
 
                 <Label Grid.Row="2" Text="{Binding Order.Message}"
-                       TextColor="{StaticResource BrandBlue}"
+                       TextColor="{AppThemeBinding Light={StaticResource BrandBlue}, Dark=#9CC0DC}"
                        IsVisible="{Binding Order.Message, Converter={StaticResource IsNotEmptyConverter}}" />
             </Grid>
 
@@ -335,7 +345,7 @@
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding Profile.Passenger.FullName}" FontSize="18"
-                                   FontAttributes="Bold" TextColor="{StaticResource BrandDark}"
+                                   FontAttributes="Bold" TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                                    LineBreakMode="TailTruncation" MaxLines="1" />
                             <Label Text="{Binding Profile.PhoneText}" Style="{StaticResource MutedLabel}" />
                             <Label Text="{Binding Profile.Passenger.TripsCount, StringFormat='Поездок всего: {0}'}"
@@ -350,7 +360,7 @@
                     </Grid>
 
                     <Border Style="{StaticResource InfoPanel}" IsVisible="{Binding Profile.HasError, Converter={StaticResource IsNotEmptyConverter}}">
-                        <Label Text="{Binding Profile.StatusMessage}" TextColor="{StaticResource ErrorText}" />
+                        <Label Text="{Binding Profile.StatusMessage}" TextColor="{AppThemeBinding Light={StaticResource ErrorText}, Dark={StaticResource ErrorTextDark}}" />
                     </Border>
 
                     <Label Text="Здесь появятся завершённые и отменённые поездки."
@@ -363,10 +373,10 @@
                                 <Border Style="{StaticResource HistoryPanel}">
                                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
                                         <Label Grid.Row="0" Grid.Column="0" Text="{Binding Route}" FontAttributes="Bold"
-                                               TextColor="{StaticResource BrandDark}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                                                LineBreakMode="TailTruncation" MaxLines="2" />
                                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding CostText}" FontAttributes="Bold"
-                                               TextColor="{StaticResource BrandDark}" VerticalOptions="Start"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" VerticalOptions="Start"
                                                Margin="8,0,0,0" />
                                         <Label Grid.Row="1" Grid.Column="0" Text="{Binding DateText}" Style="{StaticResource MutedLabel}" />
                                         <Label Grid.Row="1" Grid.Column="1" Text="{Binding StatusText}"
@@ -398,10 +408,40 @@
                         <Border Style="{StaticResource HistoryPanel}">
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="{Binding Settings.ApplicationName}" FontSize="18" FontAttributes="Bold"
-                                       TextColor="{StaticResource BrandDark}" />
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
                                 <Label Text="{Binding Settings.Description}" Style="{StaticResource MutedLabel}" />
                                 <Label Text="{Binding Settings.Version}" Style="{StaticResource MutedLabel}" />
                             </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="ТЕМА ОФОРМЛЕНИЯ" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource SegmentedControl}">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                                <Button Text="Светлая"
+                                        Command="{Binding Settings.UseLightThemeCommand}"
+                                        Style="{StaticResource SegmentButton}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding Settings.UseLightTheme}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{StaticResource ActionOrange}" />
+                                            <Setter Property="TextColor" Value="{StaticResource White}" />
+                                            <Setter Property="FontAttributes" Value="Bold" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button Grid.Column="1" Text="Тёмная"
+                                        Command="{Binding Settings.UseDarkThemeCommand}"
+                                        Style="{StaticResource SegmentButton}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding Settings.UseDarkTheme}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{StaticResource ActionOrange}" />
+                                            <Setter Property="TextColor" Value="{StaticResource White}" />
+                                            <Setter Property="FontAttributes" Value="Bold" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </Grid>
                         </Border>
                     </VerticalStackLayout>
 
@@ -434,13 +474,13 @@
 
         <!-- нижняя навигация -->
         <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Padding="12,8" ColumnSpacing="8"
-              BackgroundColor="{StaticResource HeaderBackground}">
+              BackgroundColor="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}">
             <Button Grid.Column="0" Text="Настройки" Style="{StaticResource NavButton}"
                     Command="{Binding ShowSettingsCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsSettingsSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
-                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
                         <Setter Property="FontAttributes" Value="Bold" />
                     </DataTrigger>
                 </Button.Triggers>
@@ -449,8 +489,8 @@
                     Command="{Binding ShowOrderCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsOrderSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
-                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
                         <Setter Property="FontAttributes" Value="Bold" />
                     </DataTrigger>
                 </Button.Triggers>
@@ -459,15 +499,15 @@
                     Command="{Binding ShowProfileCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsProfileSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{StaticResource ActionOrange}" />
-                        <Setter Property="BackgroundColor" Value="{StaticResource SurfaceWarm}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
                         <Setter Property="FontAttributes" Value="Bold" />
                     </DataTrigger>
                 </Button.Triggers>
             </Button>
         </Grid>
         <BoxView Grid.Row="2" VerticalOptions="Start" HeightRequest="1"
-                 Color="{StaticResource StrokeColor}" />
+                 Color="{AppThemeBinding Light={StaticResource StrokeColor}, Dark={StaticResource StrokeColorDark}}" />
     </Grid>
 
 </ContentPage>
