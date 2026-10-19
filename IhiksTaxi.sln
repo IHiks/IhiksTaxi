@@ -16,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{210131D9
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IhiksTaxi.Application.Tests", "tests\IhiksTaxi.Application.Tests\IhiksTaxi.Application.Tests.csproj", "{0D38F9E5-20F5-4519-AB5C-4090EBC83CD0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IhiksTaxi.Infrastructure.Tests", "tests\IhiksTaxi.Infrastructure.Tests\IhiksTaxi.Infrastructure.Tests.csproj", "{17FE9BEB-7B28-4146-8CA7-A3322135885C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{0D38F9E5-20F5-4519-AB5C-4090EBC83CD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D38F9E5-20F5-4519-AB5C-4090EBC83CD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D38F9E5-20F5-4519-AB5C-4090EBC83CD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17FE9BEB-7B28-4146-8CA7-A3322135885C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17FE9BEB-7B28-4146-8CA7-A3322135885C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17FE9BEB-7B28-4146-8CA7-A3322135885C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17FE9BEB-7B28-4146-8CA7-A3322135885C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{71964BA1-2EC6-4F34-81DB-6328FF5F923E} = {3ED7E5F4-FD91-4A75-8D6F-4DD8A50784FB}
@@ -52,5 +58,6 @@ Global
 		{C6F87859-F8A8-4AB9-85E1-506520D6A97C} = {3ED7E5F4-FD91-4A75-8D6F-4DD8A50784FB}
 		{5BF98B18-AC9E-4CCE-83A0-71F859CFFA05} = {3ED7E5F4-FD91-4A75-8D6F-4DD8A50784FB}
 		{0D38F9E5-20F5-4519-AB5C-4090EBC83CD0} = {210131D9-2980-4DCB-B18E-F15A98378247}
+		{17FE9BEB-7B28-4146-8CA7-A3322135885C} = {210131D9-2980-4DCB-B18E-F15A98378247}
 	EndGlobalSection
 EndGlobal

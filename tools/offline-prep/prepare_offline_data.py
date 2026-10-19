@@ -40,6 +40,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, "cache")
 MAP_WEB = os.path.join(HERE, "map-web")
 OUT = os.path.abspath(os.path.join(HERE, "..", "..", "src", "IhiksTaxi.UI", "offline-data"))
+# ручной справочник мест: синонимы и переименования поверх того, что есть в OSM
+PLACES_EXTRA = os.path.join(HERE, "places-extra.json")
+
+# объекты, которые ищут не по адресу, а по названию — ТЦ, ТРК, универмаги
+MALL_SHOPS = ["mall", "department_store"]
 
 # для маршрутизации берём только проезжие дороги, а не тропинки и лестницы
 DRIVABLE = {
@@ -298,7 +303,9 @@ def build_addresses(raw):
     street_points = {}
     for element in raw["elements"]:
         tags = element.get("tags", {})
-        street = (tags.get("addr:street") or "").strip()
+        # адрес дома может опираться либо на улицу, либо на место:
+        # в микрорайонах дома нумеруются как «Московский микрорайон, 5» (addr:place)
+        street = (tags.get("addr:street") or tags.get("addr:place") or "").strip()
         house = (tags.get("addr:housenumber") or "").strip()
         if not street or not house:
             continue
@@ -338,6 +345,115 @@ def build_places(raw):
                          "coordinates": [element["lon"], element["lat"]]},
         })
     return features
+
+
+def point_of(element):
+    lat = element.get("lat") or (element.get("center") or {}).get("lat")
+    lon = element.get("lon") or (element.get("center") or {}).get("lon")
+    return (lat, lon) if lat is not None and lon is not None else (None, None)
+
+
+def mall_query():
+    s, w, n, e = BBOX
+    selectors = "".join(f'nwr["shop"="{shop}"]({s},{w},{n},{e});' for shop in MALL_SHOPS)
+    return f'[out:json][timeout:180];({selectors});out center;'
+
+
+def addr_place_query():
+    return bbox_query('nwr["addr:place"]["addr:housenumber"]', output="out center;")
+
+
+# торговые центры: в адресах их нет, а для подсказок и подписей они нужны
+def build_mall_features(raw):
+    features = []
+    for element in (raw or {}).get("elements", []):
+        tags = element.get("tags", {})
+        name = (tags.get("name") or "").strip()
+        lat, lon = point_of(element)
+        if not name or lat is None:
+            continue
+        features.append({
+            "type": "Feature",
+            "properties": {"name": name, "kind": "mall"},
+            "geometry": {"type": "Point", "coordinates": [round(lon, 6), round(lat, 6)]},
+        })
+    return features
+
+
+# подписи микрорайонов: центр всех адресных объектов с адресом «микрорайон …»
+def build_district_features(raw):
+    groups = {}
+    for element in (raw or {}).get("elements", []):
+        tags = element.get("tags", {})
+        place = (tags.get("addr:place") or "").strip()
+        if "микрорайон" not in place.lower():
+            continue
+        lat, lon = point_of(element)
+        if lat is None:
+            continue
+        groups.setdefault(place, []).append((lat, lon))
+
+    features = []
+    for name, points in sorted(groups.items()):
+        lat = sum(point[0] for point in points) / len(points)
+        lon = sum(point[1] for point in points) / len(points)
+        features.append({
+            "type": "Feature",
+            "properties": {"name": name, "kind": "neighbourhood"},
+            "geometry": {"type": "Point", "coordinates": [round(lon, 6), round(lat, 6)]},
+        })
+    return features
+
+
+# справочник мест для подсказок: ТЦ и ТРК из OSM плюс ручные записи с синонимами.
+# Тип объекта в адресе не хранится, поэтому ищем его по списку синонимов.
+def build_places_index(mall_raw):
+    places = {}
+
+    def add(name, lat=None, lon=None, aliases=()):
+        entry = places.get(name.lower())
+        if entry is None:
+            entry = {"n": name, "a": []}
+            if lat is not None and lon is not None:
+                entry["lat"], entry["lon"] = round(lat, 6), round(lon, 6)
+            places[name.lower()] = entry
+        for alias in aliases:
+            if alias and alias.lower() != name.lower():
+                if alias.lower() not in [item.lower() for item in entry["a"]]:
+                    entry["a"].append(alias)
+        return entry
+
+    for element in (mall_raw or {}).get("elements", []):
+        tags = element.get("tags", {})
+        name = (tags.get("name") or "").strip()
+        lat, lon = point_of(element)
+        if name and lat is not None:
+            add(name, lat, lon)
+
+    # ручные записи: привычные названия, синонимы и места, которых нет в OSM
+    if os.path.exists(PLACES_EXTRA):
+        with open(PLACES_EXTRA, "r", encoding="utf-8") as handle:
+            for item in json.load(handle):
+                name = (item.get("n") or "").strip()
+                if not name:
+                    continue
+                entry = add(name, item.get("lat"), item.get("lon"), item.get("a") or [])
+                entry["n"] = name  # руками указанное название важнее того, что в OSM
+
+    return sorted(places.values(), key=lambda item: item["n"])
+
+
+# одна подпись на одно имя: в OSM одно и то же место может встречаться дважды
+def dedupe_names(features):
+    seen = set()
+    unique = []
+    for feature in features:
+        name = feature["properties"]["name"]
+        if name in seen:
+            continue
+        seen.add(name)
+        unique.append(feature)
+    return unique
 
 
 def write_json(path, payload):
@@ -393,6 +509,18 @@ def main():
     addresses_raw = overpass(
         bbox_query('nwr["addr:housenumber"]["addr:street"]', output="out center;"),
         "addresses", force, fetch)
+    # дома в микрорайонах адресуются местом, а не улицей («Московский микрорайон, 5»)
+    addr_place_raw = overpass(addr_place_query(), "addr_place", force, fetch)
+    mall_raw = overpass(mall_query(), "malls", force, fetch)
+
+    if addr_place_raw:
+        if addresses_raw:
+            merged = {(el["type"], el["id"]): el for el in addresses_raw["elements"]}
+            for element in addr_place_raw["elements"]:
+                merged.setdefault((element["type"], element["id"]), element)
+            addresses_raw = {"elements": list(merged.values())}
+        else:
+            addresses_raw = addr_place_raw
 
     log("Строим слой улиц и граф дорог...")
     road_features, graph = build_roads(roads_raw)
@@ -404,6 +532,12 @@ def main():
     log("Строим подписи и адресный индекс...")
     place_features = build_places(places_raw) if places_raw else []
     addresses, streets = build_addresses(addresses_raw) if addresses_raw else ([], [])
+
+    # к подписям городов и посёлков добавляем микрорайоны и торговые центры
+    place_features = dedupe_names(
+        place_features + build_district_features(addr_place_raw) + build_mall_features(mall_raw))
+    places_index = build_places_index(mall_raw)
+    log(f"Справочник мест: {len(places_index)} записей")
 
     write_json(os.path.join(OUT, "map", "roads.geojson"),
                {"type": "FeatureCollection", "features": road_features})
@@ -418,6 +552,7 @@ def main():
     write_json(os.path.join(OUT, "graph", "roadgraph.json"), graph)
     write_json(os.path.join(OUT, "index", "addresses.json"),
                {"streets": streets, "houses": addresses})
+    write_json(os.path.join(OUT, "index", "places.json"), {"places": places_index})
 
     log("Складываем Leaflet и веб-часть карты...")
     download("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",

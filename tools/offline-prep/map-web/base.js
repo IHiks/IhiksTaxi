@@ -64,7 +64,7 @@
 	// тем при меньшем масштабе он появляется, чтобы карта не была забита именами
 	var PLACE_MIN_ZOOM = {
 		city: 9, town: 11, quarter: 12, neighbourhood: 12, suburb: 12,
-		village: 13, hamlet: 14, locality: 14
+		village: 13, hamlet: 14, locality: 14, mall: 15
 	};
 	var PLACE_FALLBACK_ZOOM = 14;
 	var BUILDINGS_MIN_ZOOM = 16;
