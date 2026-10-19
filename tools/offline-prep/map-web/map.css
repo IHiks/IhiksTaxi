@@ -65,13 +65,26 @@ html, body, #map {
 	color: #102a43;
 	text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
 	white-space: nowrap;
+	display: inline-block;
+	/* подпись центрируем по самой точке, иначе текст уходит вправо от неё */
+	transform: translate(-50%, -50%);
 }
 
 .place-label.district {
 	font-weight: normal;
-	font-size: 11px;
-	color: #486581;
-	letter-spacing: 1px;
+	font-size: 10px;
+	color: #627d98;
+	letter-spacing: 0.3px;
+	text-shadow: 0 0 2px #fff, 0 0 2px #fff;
+}
+
+/* торговые центры — второстепенные подписи: мельче и бледнее, чтобы не спорили с улицами */
+.place-label.mall {
+	font-weight: normal;
+	font-size: 9px;
+	color: #829ab1;
+	letter-spacing: 0;
+	text-shadow: 0 0 2px #fff, 0 0 2px #fff;
 }
 
 .leaflet-tooltip {

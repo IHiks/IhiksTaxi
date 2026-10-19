@@ -63,8 +63,8 @@
 	// подписи населённых пунктов показываем не сразу: чем крупнее объект,
 	// тем при меньшем масштабе он появляется, чтобы карта не была забита именами
 	var PLACE_MIN_ZOOM = {
-		city: 9, town: 11, quarter: 12, neighbourhood: 12, suburb: 12,
-		village: 13, hamlet: 14, locality: 14, mall: 15
+		city: 9, town: 11, quarter: 12, neighbourhood: 13, suburb: 12,
+		village: 13, hamlet: 14, locality: 14, mall: 16
 	};
 	var PLACE_FALLBACK_ZOOM = 14;
 	var BUILDINGS_MIN_ZOOM = 16;
@@ -86,14 +86,18 @@
 		L.geoJSON(geo, {
 			pointToLayer: function (feature, latlng) {
 				var kind = feature.properties.kind || "";
-				var district = ["city", "town", "village"].indexOf(kind) < 0;
+				var labelClass = kind === "mall"
+					? "place-label mall"
+					: (["city", "town", "village"].indexOf(kind) < 0
+						? "place-label district"
+						: "place-label");
 				var minZoom = PLACE_MIN_ZOOM.hasOwnProperty(kind)
 					? PLACE_MIN_ZOOM[kind]
 					: PLACE_FALLBACK_ZOOM;
 				var marker = L.marker(latlng, {
 					interactive: false,
 					icon: L.divIcon({ className: "place-marker", html:
-						'<span class="' + (district ? "place-label district" : "place-label") + '">' +
+						'<span class="' + labelClass + '">' +
 						feature.properties.name + "</span>",
 						iconSize: [0, 0] })
 				});
