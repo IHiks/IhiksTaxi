@@ -33,24 +33,54 @@
 		return fetchJson(url).then(build).catch(function () { });
 	}
 
+	// Подложка перекрашивается вместе с темой приложения: страница получает
+	// сигнал window.ihiksSetTheme(true|false) и переводит слои на другой набор цветов.
+	var THEMES = {
+		light: {
+			roads: {
+				motorway: "#243b53", trunk: "#243b53", primary: "#334e68",
+				secondary: "#486581", tertiary: "#627d98",
+				major: "#486581", minor: "#9fb3c8"
+			},
+			buildings: { color: "#f0b88a", weight: 0.5, fillColor: "#ffe3c4", fillOpacity: 0.95 },
+			route: "#ff8000"
+		},
+		dark: {
+			roads: {
+				motorway: "#4d7fa3", trunk: "#4d7fa3", primary: "#436c8c",
+				secondary: "#3a5f7d", tertiary: "#34536b",
+				major: "#3a5f7d", minor: "#2b4155"
+			},
+			buildings: { color: "#2f4a5e", weight: 0.5, fillColor: "#1e3242", fillOpacity: 0.95 },
+			route: "#ff911f"
+		}
+	};
+	var darkMode = false;
+
+	function palette() {
+		return darkMode ? THEMES.dark : THEMES.light;
+	}
+
 	function roadStyle(highway, major) {
-		var palette = {
-			motorway: "#243b53", trunk: "#243b53", primary: "#334e68",
-			secondary: "#486581", tertiary: "#627d98"
-		};
+		var roads = palette().roads;
 		return {
-			color: palette[highway] || (major ? "#486581" : "#9fb3c8"),
+			color: roads[highway] || (major ? roads.major : roads.minor),
 			weight: major ? 3 : 1.2,
 			opacity: major ? 0.88 : 0.68
 		};
+	}
+
+	function featureRoadStyle(feature) {
+		return roadStyle(feature.properties.h, feature.properties.major === true);
 	}
 
 	function buildRoadLayer(geo, forceMajor) {
 		return L.geoJSON(geo, {
 			renderer: roadRenderer,
 			style: function (feature) {
-				var major = forceMajor || feature.properties.major === true;
-				return roadStyle(feature.properties.h, major);
+				return forceMajor
+					? roadStyle(feature.properties.h, true)
+					: featureRoadStyle(feature);
 			},
 			onEachFeature: function (feature, layer) {
 				if (forceMajor && feature.properties.n) {
@@ -141,7 +171,7 @@
 				}
 				buildingsLayer = L.geoJSON(geo, {
 					renderer: buildingRenderer,
-					style: { color: "#f0b88a", weight: 0.5, fillColor: "#ffe3c4", fillOpacity: 0.95 }
+					style: palette().buildings
 				});
 				updateBuildings();
 			});
@@ -230,9 +260,9 @@
 			return;
 		}
 		if (geometry) {
-			routeLayer = L.geoJSON(geometry, { style: { color: "#ff8000", weight: 5 } }).addTo(map);
+			routeLayer = L.geoJSON(geometry, { style: { color: palette().route, weight: 5 } }).addTo(map);
 		} else if (approximate) {
-			routeLayer = L.polyline([a, b], { color: "#ff8000", weight: 4, dashArray: "8 8" }).addTo(map);
+			routeLayer = L.polyline([a, b], { color: palette().route, weight: 4, dashArray: "8 8" }).addTo(map);
 		}
 	}
 
@@ -349,6 +379,45 @@
 	Promise.all(layers).then(function () {
 		updateLayerVisibility();
 	});
+
+	// Перекрашивание уже нарисованных слоёв: цвет в Leaflet задаётся при
+	// создании, поэтому при смене темы стили нужно проставить заново.
+	function restyle() {
+		var paints = palette();
+		[roadsLayer, detailRoadsLayer].forEach(function (layer) {
+			if (!layer) {
+				return;
+			}
+			layer.eachLayer(function (child) {
+				if (child.setStyle && child.feature) {
+					child.setStyle(featureRoadStyle(child.feature));
+				}
+			});
+		});
+		if (buildingsLayer) {
+			buildingsLayer.eachLayer(function (child) {
+				if (child.setStyle) {
+					child.setStyle(paints.buildings);
+				}
+			});
+		}
+		if (routeLayer) {
+			routeLayer.setStyle({ color: paints.route });
+		}
+	}
+
+	function applyTheme(dark) {
+		dark = !!dark;
+		if (dark === darkMode) {
+			return true;
+		}
+		darkMode = dark;
+		document.documentElement.classList.toggle("dark", dark);
+		restyle();
+		return true;
+	}
+
+	window.ihiksSetTheme = applyTheme;
 
 	pull();
 	setInterval(pull, POLL_MS);

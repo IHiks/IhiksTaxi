@@ -2,7 +2,6 @@
 
 #if WINDOWS
 using System.Runtime.InteropServices;
-using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -12,28 +11,52 @@ using WinUIWindow = Microsoft.UI.Xaml.Window;
 
 namespace IhiksTaxi.UI;
 
-// Системная плашка Windows убрана: шапку рисует сама страница, а здесь
-// собраны операции над окном — область перетаскивания и кнопки окна.
+// Системная плашка Windows убрана: шапку рисует сама страница. Здесь собраны
+// операции над окном — свернуть, развернуть, закрыть, потянуть за шапку и
+// перекрасить системную рамку под тему приложения.
 public static class WindowChrome
 {
+	// ширина блока кнопок окна: три кнопки по 40 плюс отступы.
+	// страница по ней понимает, где по шапке можно тянуть, а где кнопки
+	public const double ButtonsWidth = 148;
+
 #if WINDOWS
 	private const uint WmClose = 0x0010;
+	private const uint WmGetMinMaxInfo = 0x0024;
+	private const uint MonitorDefaultToNearest = 2;
 
-	// ширина блока кнопок окна: три кнопки по 40 плюс отступы
-	private const double ButtonsWidth = 148;
+	// оформление рамки окна (Windows 11): без этих атрибутов система рисует
+	// вокруг окна светлую полосу, которая в тёмной теме выдаёт себя полосой над шапкой
+	private const int DwmwaUseImmersiveDarkMode = 20;
+	private const int DwmwaUseImmersiveDarkModeLegacy = 19;
+	private const int DwmwaCaptionColor = 35;
+	private const int DwmwaBorderColor = 34;
+	private const uint BorderDark = 0x00302414;   // #142430 в порядке BGR
+	private const uint BorderLight = 0x00FFFFFF;
 
 	[DllImport("user32.dll")]
 	private static extern bool PostMessageW(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-	private static AppWindow? _appWindow;
-	private static FrameworkElement? _regionElement;
-	private static RectInt32 _lastRegion;
-	private static bool _hasLastRegion;
-	private static bool _hooked;
-	private static bool _subclassed;
+	[DllImport("user32.dll")]
+	private static extern bool GetCursorPos(out NativePoint point);
 
-	private const uint WmGetMinMaxInfo = 0x0024;
-	private const uint MonitorDefaultToNearest = 2;
+	[DllImport("user32.dll")]
+	private static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
+
+	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+	private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+
+	[DllImport("comctl32.dll", SetLastError = true)]
+	private static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc proc, UIntPtr id, IntPtr data);
+
+	[DllImport("comctl32.dll")]
+	private static extern IntPtr DefSubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+
+	[DllImport("dwmapi.dll", PreserveSig = true)]
+	private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+	[DllImport("dwmapi.dll", PreserveSig = true)]
+	private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint value, int size);
 
 	[StructLayout(LayoutKind.Sequential)]
 	private struct NativePoint
@@ -74,30 +97,24 @@ public static class WindowChrome
 
 	private static readonly SubclassProc _chromeProc = OnWindowMessage;
 
-	[DllImport("user32.dll")]
-	private static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
-
-	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-	private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
-
-	[DllImport("comctl32.dll", SetLastError = true)]
-	private static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc proc, UIntPtr id, IntPtr data);
-
-	[DllImport("comctl32.dll")]
-	private static extern IntPtr DefSubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+	private static AppWindow? _appWindow;
+	private static IntPtr _subclassed;
+	private static int _grabX;
+	private static int _grabY;
+	private static bool _dragging;
 #endif
 
 	private static VisualElement? _region;
 	private static Action<bool>? _maximizedChanged;
 
-	// Делает элемент областью перетаскивания и убирает системную шапку окна.
-	public static void Attach(VisualElement dragRegion, Action<bool>? maximizedChanged = null)
+	// Делает элемент шапкой окна: убирает системную плашку и следит за разворотом.
+	public static void Attach(VisualElement header, Action<bool>? maximizedChanged = null)
 	{
 		Detach();
-		_region = dragRegion;
+		_region = header;
 		_maximizedChanged = maximizedChanged;
-		dragRegion.HandlerChanged += OnRegionChanged;
-		dragRegion.SizeChanged += OnRegionChanged;
+		header.HandlerChanged += OnHeaderChanged;
+		header.SizeChanged += OnHeaderChanged;
 		TryApply();
 	}
 
@@ -135,24 +152,95 @@ public static class WindowChrome
 #endif
 	}
 
+	// Потянуть окно за шапку. Начало и продолжение — двумя вызовами, потому что
+	// смещение считаем не по пальцу/мыши в координатах элементов (они ездят
+	// вместе с окном), а по курсору на экране — так окно не «убегает» от мыши.
+	public static void DragStart()
+	{
+#if WINDOWS
+		_dragging = false;
+
+		// развёрнутое окно тянем только после возврата к обычному размеру
+		if (_appWindow is null || IsMaximized)
+			return;
+
+		if (!GetCursorPos(out var cursor))
+			return;
+
+		var position = _appWindow.Position;
+		_grabX = cursor.X - position.X;
+		_grabY = cursor.Y - position.Y;
+		_dragging = true;
+#endif
+	}
+
+	public static void DragMove()
+	{
+#if WINDOWS
+		if (!_dragging || _appWindow is null || IsMaximized)
+			return;
+
+		if (!GetCursorPos(out var cursor))
+			return;
+
+		try
+		{
+			_appWindow.Move(new PointInt32(cursor.X - _grabX, cursor.Y - _grabY));
+		}
+		catch (Exception ex)
+		{
+			AppLog.Error("Не удалось перетащить окно", ex);
+		}
+#endif
+	}
+
+	// Цвет рамки системы не подчиняется теме приложения: перекрашиваем её сами.
+	public static void ApplyFrameTheme()
+	{
+#if WINDOWS
+		var hwnd = MainHandle();
+		if (hwnd == IntPtr.Zero)
+			return;
+
+		try
+		{
+			int dark = ThemeService.IsDark ? 1 : 0;
+			if (DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref dark, sizeof(int)) != 0)
+				DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkModeLegacy, ref dark, sizeof(int));
+
+			uint border = ThemeService.IsDark ? BorderDark : BorderLight;
+			DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(uint));
+
+			// шапку рисуем сами, но полосу рамки система красит цветом заголовка:
+			// держим его в тон шапке, иначе над ней видна полоса чужого цвета
+			int caption = ThemeService.IsDark ? (int)BorderDark : (int)BorderLight;
+			DwmSetWindowAttribute(hwnd, DwmwaCaptionColor, ref caption, sizeof(int));
+		}
+		catch (Exception ex)
+		{
+			AppLog.Error("Не удалось перекрасить рамку окна", ex);
+		}
+#endif
+	}
+
 	private static void Detach()
 	{
 		if (_region is not null)
 		{
-			_region.HandlerChanged -= OnRegionChanged;
-			_region.SizeChanged -= OnRegionChanged;
+			_region.HandlerChanged -= OnHeaderChanged;
+			_region.SizeChanged -= OnHeaderChanged;
 			_region = null;
 		}
 	}
 
-	private static void OnRegionChanged(object? sender, EventArgs e) => TryApply();
+	private static void OnHeaderChanged(object? sender, EventArgs e) => TryApply();
 
 	private static void TryApply()
 	{
 #if WINDOWS
 		try
 		{
-			if (_region?.Handler?.PlatformView is not FrameworkElement element)
+			if (_region?.Handler?.PlatformView is not FrameworkElement)
 				return;
 
 			var native = NativeWindow();
@@ -165,13 +253,11 @@ public static class WindowChrome
 
 			if (!ReferenceEquals(appWindow, _appWindow))
 			{
-				if (_appWindow is not null && _hooked)
+				if (_appWindow is not null)
 					_appWindow.Changed -= OnWindowChanged;
 
 				_appWindow = appWindow;
 				appWindow.Changed += OnWindowChanged;
-				_hooked = true;
-				_hasLastRegion = false;
 			}
 
 			// убираем системную шапку вместе с её кнопками; MAUI, увидев это,
@@ -182,10 +268,8 @@ public static class WindowChrome
 			// контент занимает всё окно
 			appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
 
-			HookMaximizeBounds(hwnd);
-
-			_regionElement = element;
-			UpdateDragRegion();
+			HookWindow(hwnd);
+			ApplyFrameTheme();
 			NotifyMaximized();
 		}
 		catch (Exception ex)
@@ -196,101 +280,58 @@ public static class WindowChrome
 	}
 
 #if WINDOWS
-	private static void HookMaximizeBounds(IntPtr hwnd)
+	private static void HookWindow(IntPtr hwnd)
 	{
-		if (_subclassed)
+		if (_subclassed == hwnd)
 			return;
 
 		try
 		{
-			_subclassed = SetWindowSubclass(hwnd, _chromeProc, UIntPtr.Zero, IntPtr.Zero);
+			_subclassed = hwnd;
+			SetWindowSubclass(hwnd, _chromeProc, UIntPtr.Zero, IntPtr.Zero);
 		}
 		catch (Exception ex)
 		{
-			AppLog.Error("Не удалось ограничить разворот окна рабочей областью", ex);
+			AppLog.Error("Не удалось подписаться на сообщения окна", ex);
 		}
 	}
 
-	// окно без системной шапки по умолчанию разворачивается на весь монитор;
-	// здесь разворот укладывается в рабочую область, чтобы панель задач осталась видна
 	private static IntPtr OnWindowMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam, UIntPtr id, IntPtr data)
 	{
-		var result = DefSubclassProc(hwnd, message, wParam, lParam);
-
-		if (message != WmGetMinMaxInfo || lParam == IntPtr.Zero)
-			return result;
-
 		try
 		{
-			var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
-			var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-			if (!GetMonitorInfo(monitor, ref info))
-				return result;
-
-			var minMax = Marshal.PtrToStructure<MinMaxInfo>(lParam);
-			minMax.MaxPosition.X = info.Work.Left - info.Monitor.Left;
-			minMax.MaxPosition.Y = info.Work.Top - info.Monitor.Top;
-			minMax.MaxSize.X = info.Work.Right - info.Work.Left;
-			minMax.MaxSize.Y = info.Work.Bottom - info.Work.Top;
-			Marshal.StructureToPtr(minMax, lParam, false);
+			// окно без системной шапки по умолчанию разворачивается на весь
+			// монитор; здесь разворот укладываем в рабочую область
+			if (message == WmGetMinMaxInfo && lParam != IntPtr.Zero)
+				ClampMaximizedBounds(hwnd, lParam);
 		}
 		catch (Exception ex)
 		{
-			AppLog.Error("Не удалось развернуть окно по размеру рабочей области", ex);
+			AppLog.Error("Ошибка обработки сообщения окна", ex);
 		}
 
-		return result;
+		return DefSubclassProc(hwnd, message, wParam, lParam);
+	}
+
+	private static void ClampMaximizedBounds(IntPtr hwnd, IntPtr lParam)
+	{
+		var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+		var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+		if (!GetMonitorInfo(monitor, ref info))
+			return;
+
+		var minMax = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+		minMax.MaxPosition.X = info.Work.Left - info.Monitor.Left;
+		minMax.MaxPosition.Y = info.Work.Top - info.Monitor.Top;
+		minMax.MaxSize.X = info.Work.Right - info.Work.Left;
+		minMax.MaxSize.Y = info.Work.Bottom - info.Work.Top;
+		Marshal.StructureToPtr(minMax, lParam, false);
 	}
 
 	private static void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
 	{
-		if (args.DidSizeChange)
-			UpdateDragRegion();
-
 		if (args.DidPresenterChange)
 			NotifyMaximized();
-	}
-
-	private static void UpdateDragRegion()
-	{
-		try
-		{
-			if (_appWindow is null || _regionElement is null)
-				return;
-
-			double scale = _regionElement.XamlRoot?.RasterizationScale ?? 1.0;
-			var bounds = _regionElement.TransformToVisual(null)
-				.TransformBounds(new Windows.Foundation.Rect(0, 0, _regionElement.ActualWidth, _regionElement.ActualHeight));
-
-			int left = (int)Math.Round(bounds.X * scale);
-			int top = (int)Math.Round(bounds.Y * scale);
-			int width = (int)Math.Round((bounds.Width - ButtonsWidth) * scale);
-			int height = (int)Math.Round(bounds.Height * scale);
-			if (width <= 0 || height <= 0)
-				return;
-
-			var rect = new RectInt32(left, top, width, height);
-			if (_hasLastRegion && rect.X == _lastRegion.X && rect.Y == _lastRegion.Y
-				&& rect.Width == _lastRegion.Width && rect.Height == _lastRegion.Height)
-				return;
-
-			_lastRegion = rect;
-			_hasLastRegion = true;
-
-			var source = InputNonClientPointerSource.GetForWindowId(_appWindow.Id);
-
-			source.SetRegionRects(NonClientRegionKind.Caption, new[] { rect });
-
-			// области системных кнопок окна перехватывают клики в правом верхнем
-			// углу даже когда шапки нет — очищаем их, иначе своя кнопка закрытия мертва
-			source.SetRegionRects(NonClientRegionKind.Close, Array.Empty<RectInt32>());
-			source.SetRegionRects(NonClientRegionKind.Minimize, Array.Empty<RectInt32>());
-			source.SetRegionRects(NonClientRegionKind.Maximize, Array.Empty<RectInt32>());
-		}
-		catch (Exception ex)
-		{
-			AppLog.Error("Не удалось задать область перетаскивания окна", ex);
-		}
 	}
 
 	private static void NotifyMaximized() => _maximizedChanged?.Invoke(IsMaximized);

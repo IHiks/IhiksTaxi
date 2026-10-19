@@ -22,6 +22,30 @@ public partial class LoginPage : ContentPage
 
 	private void OnCloseClicked(object? sender, EventArgs e) => WindowChrome.Close();
 
+	// потянуть окно за шапку — как в MainPage: шапку рисует страница
+	private void OnHeaderPanUpdated(object? sender, PanUpdatedEventArgs e)
+	{
+		switch (e.StatusType)
+		{
+			case GestureStatus.Started:
+				WindowChrome.DragStart();
+				break;
+			case GestureStatus.Running:
+				WindowChrome.DragMove();
+				break;
+		}
+	}
+
+	// двойной щелчок по шапке разворачивает окно, но по кнопкам окна — нет
+	private void OnHeaderDoubleTapped(object? sender, TappedEventArgs e)
+	{
+		var point = e.GetPosition(AppHeader);
+		if (point is null || point.Value.X >= AppHeader.Width - WindowChrome.ButtonsWidth)
+			return;
+
+		WindowChrome.ToggleMaximize();
+	}
+
 	// форма входа короткая: при достатке места держим её по центру, при нехватке — прокрутка
 	private void CenterForm()
 	{

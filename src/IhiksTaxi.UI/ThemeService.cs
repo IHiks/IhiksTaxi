@@ -11,6 +11,10 @@ public static class ThemeService
 
 	public static bool IsDark { get; private set; }
 
+	// подписчики — те, кто рисует не через XAML и потому сам перекрашивается
+	// при смене темы: например, карта внутри WebView
+	public static event Action? Changed;
+
 	// приложение передаётся явно: в конструкторе App ссылка Application.Current ещё не надёжна
 	public static void Initialize(Microsoft.Maui.Controls.Application app)
 	{
@@ -33,6 +37,11 @@ public static class ThemeService
 	{
 		if (_app is not null)
 			_app.UserAppTheme = IsDark ? AppTheme.Dark : AppTheme.Light;
+
+		// рамку окна рисует система, сама она о теме приложения не знает
+		WindowChrome.ApplyFrameTheme();
+
+		Changed?.Invoke();
 	}
 
 	private static string FilePath()

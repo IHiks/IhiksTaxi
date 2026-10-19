@@ -93,3 +93,69 @@ html, body, #map {
 	box-shadow: 0 2px 8px rgba(16, 42, 67, 0.16);
 	color: #102a43;
 }
+
+/* тёмная тема: класс ставит приложение через window.ihiksSetTheme */
+html.dark, html.dark body, html.dark #map {
+	background: #0f1a22;
+}
+
+html.dark #attribution {
+	background: rgba(20, 36, 48, 0.85);
+	border-color: #2a3a47;
+	color: #9baab8;
+}
+
+html.dark .pin {
+	background: #ff911f;
+	border-color: #142430;
+}
+
+html.dark .car-marker {
+	background: #5b7f9e;
+	border-color: #142430;
+}
+
+html.dark .car-marker.assigned {
+	background: #ff911f;
+}
+
+html.dark .place-label {
+	color: #c6d3de;
+	text-shadow: 0 0 3px #0f1a22, 0 0 3px #0f1a22, 0 0 3px #0f1a22;
+}
+
+html.dark .place-label.district {
+	color: #8aa0b3;
+	text-shadow: 0 0 2px #0f1a22, 0 0 2px #0f1a22;
+}
+
+html.dark .place-label.mall {
+	color: #6f8699;
+}
+
+html.dark .leaflet-tooltip {
+	background: #182734;
+	border-color: #2a3a47;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	color: #e7edf2;
+}
+
+html.dark .leaflet-bar {
+	border-color: #2a3a47;
+}
+
+html.dark .leaflet-bar a {
+	background: #182734;
+	border-bottom-color: #2a3a47;
+	color: #e7edf2;
+}
+
+html.dark .leaflet-bar a:hover,
+html.dark .leaflet-bar a:focus {
+	background: #21303c;
+}
+
+html.dark .leaflet-bar a.leaflet-disabled {
+	background: #142430;
+	color: #4b5a66;
+}

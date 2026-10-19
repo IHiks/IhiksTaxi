@@ -57,6 +57,8 @@
     <Color x:Key="OrangeSurfaceDark">#2E2519</Color>
     <Color x:Key="StrokeColorDark">#2A3A47</Color>
     <Color x:Key="TileBorderDark">#26343F</Color>
+    <Color x:Key="TileSelected">#FFFFFF</Color>
+    <Color x:Key="TileSelectedDark">#2E4250</Color>
     <Color x:Key="ColorDotBorderDark">#3A4A56</Color>
     <Color x:Key="SoftBlueDark">#1E2E3A</Color>
     <Color x:Key="DisabledBackgroundDark">#232D36</Color>

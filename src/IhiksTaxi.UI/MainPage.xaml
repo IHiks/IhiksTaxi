@@ -13,7 +13,11 @@
         <!-- верхняя плашка: она же заголовок окна, поэтому несёт кнопки окна -->
         <Grid x:Name="AppHeader" Grid.Row="0" Padding="16,0" HeightRequest="54"
               BackgroundColor="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}">
-            <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="6">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnHeaderPanUpdated" />
+                <TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnHeaderDoubleTapped" />
+            </Grid.GestureRecognizers>
+            <HorizontalStackLayout HorizontalOptions="Start" VerticalOptions="Center" Spacing="6">
                 <Label Text="IHIKS" Style="{StaticResource LogoOrange}" />
                 <Label Text="ТАКСИ" Style="{StaticResource LogoDark}" />
             </HorizontalStackLayout>
@@ -178,7 +182,7 @@
                                                     <Border.Triggers>
                                                         <DataTrigger TargetType="Border"
                                                                      Binding="{Binding IsSelected}" Value="True">
-                                                            <Setter Property="BackgroundColor" Value="{StaticResource White}" />
+                                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource TileSelected}, Dark={StaticResource TileSelectedDark}}" />
                                                             <Setter Property="Stroke" Value="{StaticResource BrandOrange}" />
                                                             <Setter Property="StrokeThickness" Value="2" />
                                                         </DataTrigger>

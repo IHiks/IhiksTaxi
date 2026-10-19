@@ -11,6 +11,10 @@
 
         <!-- своя шапка окна: до входа в аккаунт видны только кнопки окна -->
         <Grid x:Name="AppHeader" Grid.Row="0" Padding="16,0" HeightRequest="46">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnHeaderPanUpdated" />
+                <TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnHeaderDoubleTapped" />
+            </Grid.GestureRecognizers>
             <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Center" Spacing="2">
                 <Button x:Name="MinimizeButton" Text="&#xE921;" Style="{StaticResource WindowButton}"
                         Clicked="OnMinimizeClicked" ToolTipProperties.Text="Свернуть" />
