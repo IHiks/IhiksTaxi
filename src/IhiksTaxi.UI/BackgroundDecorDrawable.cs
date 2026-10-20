@@ -19,13 +19,15 @@ public sealed class BackgroundDecorDrawable : IDrawable
 		canvas.StrokeLineCap = LineCap.Round;
 		canvas.StrokeLineJoin = LineJoin.Round;
 
-		// две толстые диагонали в правом верхнем углу
+		// две толстые диагонали от верхнего края к правому — на всю высоту
+		// страницы, чтобы на большом экране они не обрывались посередине.
+		// Полосы одинакового цвета и параллельны: сдвиг по горизонтали
+		// одинаковый у обеих (0.27w), поэтому угол наклона общий
 		canvas.StrokeColor = Orange;
 		canvas.StrokeSize = 20;
 		canvas.Alpha = 0.12f;
-		canvas.DrawLine(w * 0.60f, -24f, w * 0.84f, h * 0.30f);
-		canvas.Alpha = 0.07f;
-		canvas.DrawLine(w * 0.72f, -24f, w * 0.96f, h * 0.30f);
+		canvas.DrawLine(w * 0.60f, -24f, w * 0.87f, h + 24f);
+		canvas.DrawLine(w * 0.72f, -24f, w * 0.99f, h + 24f);
 
 		canvas.RestoreState();
 	}

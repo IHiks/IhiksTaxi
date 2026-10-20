@@ -499,10 +499,14 @@
     </Style>
 
     <!-- кнопки системной шапки: сворачивание, разворот, закрытие.
-         цвета состояний ставит WindowChrome: визуальные состояния MAUI
-         оставляли на кнопке цвет нажатия после сворачивания окна -->
-    <Style TargetType="Button" x:Key="WindowButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="BackgroundColor" Value="Transparent" />
+         Наследования от BaseButton нет намеренно: у него состояния нажатия
+         красят кнопку в оранжевый, а MAUI не снимает это состояние после
+         щелчка — кнопка окна оставалась оранжевой навсегда. Здесь цвета
+         ставит WindowChrome по событиям указателя. -->
+    <Style TargetType="Button" x:Key="WindowButton">
+        <!-- без прозрачного фона: кнопка с прозрачной кистью в WinUI
+             пропускает мышь мимо себя, и ни наведение, ни щелчок не работают -->
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource MutedText}, Dark={StaticResource MutedTextDark}}" />
         <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
         <Setter Property="FontSize" Value="11" />
@@ -517,8 +521,12 @@
 
     <Style TargetType="Button" x:Key="WindowCloseButton" BasedOn="{StaticResource WindowButton}" />
 
+    <!-- цвета навигации (наведение, активная вкладка) ставит страница в коде:
+         состояния MAUI не снимали цвет после щелчка, и кнопки оставались
+         с цветом активной вкладки. Фон непрозрачный — прозрачная кисть в WinUI
+         ломает обработку указателя -->
     <Style TargetType="Button" x:Key="NavButton" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource MutedText}, Dark={StaticResource MutedTextDark}}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontAttributes" Value="None" />
@@ -528,18 +536,6 @@
             <VisualStateGroupList>
                 <VisualStateGroup x:Name="CommonStates">
                     <VisualState x:Name="Normal" />
-                    <VisualState x:Name="PointerOver">
-                        <VisualState.Setters>
-                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource SurfaceMutedDark}}" />
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
-                        </VisualState.Setters>
-                    </VisualState>
-                    <VisualState x:Name="Pressed">
-                        <VisualState.Setters>
-                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource StrokeColor}, Dark={StaticResource StrokeColorDark}}" />
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
-                        </VisualState.Setters>
-                    </VisualState>
                     <VisualState x:Name="Focused">
                         <VisualState.Setters>
                             <Setter Property="BorderColor" Value="{StaticResource FocusColor}" />

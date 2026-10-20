@@ -482,36 +482,15 @@
         <!-- нижняя навигация -->
         <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Padding="12,8" ColumnSpacing="8"
               BackgroundColor="{AppThemeBinding Light={StaticResource HeaderBackground}, Dark={StaticResource HeaderBackgroundDark}}">
-            <Button Grid.Column="0" Text="Настройки" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowSettingsCommand}">
-                <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsSettingsSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
-                        <Setter Property="FontAttributes" Value="Bold" />
-                    </DataTrigger>
-                </Button.Triggers>
-            </Button>
-            <Button Grid.Column="1" Text="Заказать" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowOrderCommand}">
-                <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsOrderSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
-                        <Setter Property="FontAttributes" Value="Bold" />
-                    </DataTrigger>
-                </Button.Triggers>
-            </Button>
-            <Button Grid.Column="2" Text="Профиль" Style="{StaticResource NavButton}"
-                    Command="{Binding ShowProfileCommand}">
-                <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsProfileSelected}" Value="True">
-                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource AccentLight}}" />
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource SurfaceWarmDark}}" />
-                        <Setter Property="FontAttributes" Value="Bold" />
-                    </DataTrigger>
-                </Button.Triggers>
-            </Button>
+            <!-- цвета навигации ставит страница в коде (PaintNav): триггеры и
+                 состояния MAUI не снимали цвет после щелчка, и неактивные
+                 кнопки оставались с цветом активной вкладки -->
+            <Button x:Name="NavSettingsButton" Grid.Column="0" Text="Настройки" Style="{StaticResource NavButton}"
+                    Command="{Binding ShowSettingsCommand}" />
+            <Button x:Name="NavOrderButton" Grid.Column="1" Text="Заказать" Style="{StaticResource NavButton}"
+                    Command="{Binding ShowOrderCommand}" />
+            <Button x:Name="NavProfileButton" Grid.Column="2" Text="Профиль" Style="{StaticResource NavButton}"
+                    Command="{Binding ShowProfileCommand}" />
         </Grid>
         <BoxView Grid.Row="2" VerticalOptions="Start" HeightRequest="1"
                  Color="{AppThemeBinding Light={StaticResource StrokeColor}, Dark={StaticResource StrokeColorDark}}" />

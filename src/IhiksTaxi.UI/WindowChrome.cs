@@ -34,6 +34,27 @@ public static class WindowChrome
 	private const int DwmwaCaptionColor = 35;
 	private const int DwmwaBorderColor = 34;
 
+	// стиль окна: у обычного окна есть утолщённая рамка для изменения размера.
+	// Она же остаётся и в развёрнутом окне — 7 пикселей по краям, из-за которых
+	// содержимое не доходит до края экрана. На весь экран рамку убираем.
+	private const int GwlStyle = -16;
+	private const int WsCaption = 0x00C00000;
+	private const int WsThickFrame = 0x00040000;
+	private const int WsPopup = unchecked((int)0x80000000);
+	private const uint SwpNoZOrder = 0x0004;
+	private const uint SwpNoMove = 0x0002;
+	private const uint SwpNoSize = 0x0001;
+	private const uint SwpFrameChanged = 0x0020;
+
+	[DllImport("user32.dll")]
+	private static extern int GetWindowLong(IntPtr hWnd, int index);
+
+	[DllImport("user32.dll")]
+	private static extern int SetWindowLong(IntPtr hWnd, int index, int value);
+
+	[DllImport("user32.dll")]
+	private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
+
 	[DllImport("user32.dll")]
 	private static extern bool PostMessageW(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -102,8 +123,16 @@ public static class WindowChrome
 	private static int _grabX;
 	private static int _grabY;
 	private static bool _dragging;
-#endif
 
+	// место и размер окна до разворота на весь экран
+	private static PointInt32 _restorePosition;
+	private static SizeInt32 _restoreBounds = new(960, 720);
+	private static bool _fullScreen;
+	private static bool _switching;
+
+	private static RectInt32 RestoreBounds()
+		=> new(_restorePosition.X, _restorePosition.Y, _restoreBounds.Width, _restoreBounds.Height);
+#endif
 	private static VisualElement? _region;
 	private static Action<bool>? _maximizedChanged;
 
@@ -133,20 +162,126 @@ public static class WindowChrome
 #endif
 	}
 
+	// Разворот на весь экран. Обычный Maximize оставляет вокруг окна полосу
+	// системной рамки (7 px) — она и выглядит как пустота по краям. Поэтому
+	// на весь экран убираем рамку совсем: клиентская область занимает весь
+	// монитор, от края до края, и приложение обволакивает экран.
 	public static void ToggleMaximize()
 	{
 #if WINDOWS
-		if (Presenter() is not { } presenter)
+		if (_appWindow is null || _switching)
 			return;
 
-		if (presenter.State == OverlappedPresenterState.Maximized)
-			presenter.Restore();
-		else
-			presenter.Maximize();
-
+		var fullScreen = !_fullScreen;
+		_fullScreen = fullScreen;
 		NotifyMaximized();
+
+		_switching = true;
+		try
+		{
+			if (fullScreen)
+			{
+				_restorePosition = _appWindow.Position;
+				_restoreBounds = _appWindow.Size;
+
+				// сначала убираем рамку, потом растягиваем окно: в обратном
+				// порядке система перестраивает окно посреди перемещения
+				SetFrameVisible(false);
+				SetResizableFrame(false);
+				_appWindow.MoveAndResize(MonitorBounds());
+			}
+			else
+			{
+				_appWindow.MoveAndResize(RestoreBounds());
+				SetResizableFrame(true);
+				SetFrameVisible(true);
+			}
+
+			// окно могло свернуться, пока перестраивалось: поднимаем его обратно
+			RestoreIfMinimized(fullScreen);
+		}
+		catch (Exception ex)
+		{
+			AppLog.Error("Не удалось развернуть окно на весь экран", ex);
+		}
+		finally
+		{
+			_switching = false;
+		}
 #endif
 	}
+
+#if WINDOWS
+	// Окно в момент перестройки рамки иногда уходит в свёрнутое состояние.
+	// Возвращаем его на место, чтобы щелчок по кнопке всегда давал результат.
+	private static void RestoreIfMinimized(bool fullScreen)
+	{
+		var presenter = Presenter();
+		if (presenter?.State != OverlappedPresenterState.Minimized)
+			return;
+
+		presenter.Restore();
+		_appWindow?.MoveAndResize(fullScreen ? MonitorBounds() : RestoreBounds());
+	}
+
+	// размер рабочей области монитора в пикселях: WinUI считает в dip, окно —
+	// в пикселях. Рабочая область, а не весь монитор: панель задач должна
+	// оставаться видна, иначе закрыть/свернуть приложение негде
+	private static RectInt32 MonitorBounds()
+	{
+		var display = DisplayArea.GetFromWindowId(_appWindow!.Id, DisplayAreaFallback.Primary);
+		var area = display.WorkArea;
+		double scale = (_region?.Handler?.PlatformView as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1.0;
+
+		return new RectInt32(
+			(int)Math.Round(area.X * scale), (int)Math.Round(area.Y * scale),
+			(int)Math.Round(area.Width * scale), (int)Math.Round(area.Height * scale));
+	}
+
+	// Рамку системы включаем и выключаем повторно: окно без рамки и без
+	// заголовка, но с клиентской областью на весь монитор даёт больше места
+	// на экране и не показывает полос вокруг содержимого.
+	private static void SetFrameVisible(bool visible)
+	{
+		if (_appWindow?.Presenter is not OverlappedPresenter presenter)
+			return;
+
+		presenter.SetBorderAndTitleBar(visible, false);
+	}
+
+	// Меняет стиль окна: убирает или возвращает рамку изменения размера.
+	// WinUI оставляет её и в развёрнутом окне — 7 пикселей по краям, из-за
+	// которых содержимое не доходит до краёв монитора. Стиль меняем только
+	// до или после перемещения окна: перестройка окна посреди MoveAndResize
+	// бросает его в свёрнутое состояние.
+	private static void SetResizableFrame(bool visible)
+	{
+		var hwnd = MainHandle();
+		if (hwnd == IntPtr.Zero)
+			return;
+
+		try
+		{
+			int style = GetWindowLong(hwnd, GwlStyle);
+			// Caption не возвращаем: заголовок у нашего окна всегда свой,
+			// системный появлялся после возврата из полного экрана
+			int wanted = visible
+				? (style | WsThickFrame) & ~(WsCaption | WsPopup)
+				: style & ~(WsCaption | WsThickFrame);
+
+			if (wanted == style)
+				return;
+
+			SetWindowLong(hwnd, GwlStyle, wanted);
+			SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+				SwpNoMove | SwpNoSize | SwpNoZOrder | SwpFrameChanged);
+		}
+		catch (Exception ex)
+		{
+			AppLog.Error("Не удалось переключить рамку окна", ex);
+		}
+	}
+#endif
 
 	public static void Close()
 	{
@@ -167,12 +302,17 @@ public static class WindowChrome
 #if WINDOWS
 		_dragging = false;
 
-		// развёрнутое окно тянем только после возврата к обычному размеру
-		if (_appWindow is null || IsMaximized)
+		if (_appWindow is null || !GetCursorPos(out var cursor))
 			return;
 
-		if (!GetCursorPos(out var cursor))
+		if (_fullScreen)
+		{
+			// с полноэкранного окна шапку тянем вниз — вернём обычный размер
+			_dragging = true;
+			_grabX = cursor.X - _appWindow.Position.X;
+			_grabY = cursor.Y - _appWindow.Position.Y;
 			return;
+		}
 
 		var position = _appWindow.Position;
 		_grabX = cursor.X - position.X;
@@ -181,10 +321,16 @@ public static class WindowChrome
 #endif
 	}
 
+	// кромка экрана, у которой окно открывается на весь экран
+	private const int SnapEdge = 6;
+
+	// на сколько пикселей ниже кромки хватаем шапку, возвращая окно из полного экрана
+	private const int SnapGrab = 12;
+
 	public static void DragMove()
 	{
 #if WINDOWS
-		if (!_dragging || _appWindow is null || IsMaximized)
+		if (!_dragging || _appWindow is null)
 			return;
 
 		if (!GetCursorPos(out var cursor))
@@ -192,6 +338,38 @@ public static class WindowChrome
 
 		try
 		{
+			var area = MonitorBounds();
+
+			if (_fullScreen)
+			{
+				// у верхней кромки остаёмся на весь экран
+				if (cursor.Y <= area.Y + SnapEdge)
+					return;
+
+				// потянули вниз — возвращаем обычный размер, и окно сразу
+				// оказывается под курсором, а не прыгает на старое место
+				ToggleMaximize();
+				var bounds = RestoreBounds();
+				int x = cursor.X - bounds.Width / 2;
+				if (area.Width > bounds.Width)
+					x = Math.Clamp(x, area.X, area.X + area.Width - bounds.Width);
+				else
+					x = area.X;
+				int y = Math.Max(area.Y, cursor.Y - SnapGrab);
+				_appWindow.Move(new PointInt32(x, y));
+				_grabX = cursor.X - x;
+				_grabY = cursor.Y - y;
+				return;
+			}
+
+			// потянули к верхней кромке — открываем на весь экран
+			if (cursor.Y <= area.Y + SnapEdge)
+			{
+				_dragging = false;
+				ToggleMaximize();
+				return;
+			}
+
 			_appWindow.Move(new PointInt32(cursor.X - _grabX, cursor.Y - _grabY));
 		}
 		catch (Exception ex)
@@ -241,11 +419,11 @@ public static class WindowChrome
 			| ((int)Math.Round(color.Green * 255) << 8)
 			| (int)Math.Round(color.Red * 255));
 
-	// Кнопки шапки ведут себя так же, как системные: обычное состояние задаёт
-	// стиль, а наведение, нажатие и возврат красим здесь. В макете MAUI цвет
-	// от состояния нажатия оставался навсегда — наведение проверяется, а уход
-	// мыши нет. Цвета берём из палитры в момент события, поэтому смена темы
-	// ничего не оставляет «залипшим».
+	// Кнопки шапки ведут себя как системные: наведение, нажатие и возврат красим
+	// здесь, по событиям указателя. В стиле это не работает: MAUI оставлял на
+	// кнопке цвет нажатия навсегда, и кнопка становилась оранжевой. Цвета берём
+	// из палитры в момент события, поэтому смена темы тоже ничего не оставляет
+	// «залипшим».
 	public static void TieWindowButtons(VisualElement owner, Button minimize, Button maximize, Button close)
 	{
 		UntieWindowButtons(owner);
@@ -264,11 +442,17 @@ public static class WindowChrome
 		var pointer = new PointerGestureRecognizer();
 		var state = new WindowButtonState(owner, button, pointer, isClose);
 
-		pointer.PointerEntered += (_, _) => Enter(state);
-		pointer.PointerExited += (_, _) => Exit(state);
-		pointer.PointerPressed += (_, _) => Press(state, true);
-		pointer.PointerReleased += (_, _) => Press(state, false);
-		button.Clicked += (_, _) => Press(state, false);
+		state.PointerEntered = (_, _) => Enter(state);
+		state.PointerExited = (_, _) => Exit(state);
+		state.PointerPressed = (_, _) => Press(state, true);
+		state.PointerReleased = (_, _) => Press(state, false);
+		state.Clicked = (_, _) => Press(state, false);
+
+		pointer.PointerEntered += state.PointerEntered;
+		pointer.PointerExited += state.PointerExited;
+		pointer.PointerPressed += state.PointerPressed;
+		pointer.PointerReleased += state.PointerReleased;
+		button.Clicked += state.Clicked;
 
 		button.GestureRecognizers.Add(pointer);
 		_buttons.Add(state);
@@ -278,6 +462,14 @@ public static class WindowChrome
 	{
 		foreach (var state in _buttons.FindAll(item => ReferenceEquals(item.Owner, owner)))
 		{
+			// обработчики снимаем явно: иначе закрытые страницы остаются
+			// жить в своих кнопках и щёлкают цветами невидимых кнопок
+			state.Pointer.PointerEntered -= state.PointerEntered;
+			state.Pointer.PointerExited -= state.PointerExited;
+			state.Pointer.PointerPressed -= state.PointerPressed;
+			state.Pointer.PointerReleased -= state.PointerReleased;
+			state.Button.Clicked -= state.Clicked;
+
 			state.Button.GestureRecognizers.Remove(state.Pointer);
 			_buttons.Remove(state);
 		}
@@ -300,6 +492,13 @@ public static class WindowChrome
 		public bool IsClose { get; }
 		public bool Hovered { get; set; }
 		public bool Pressed { get; set; }
+
+		// обработчики храним, чтобы их можно было отцепить
+		public EventHandler<PointerEventArgs> PointerEntered { get; set; } = null!;
+		public EventHandler<PointerEventArgs> PointerExited { get; set; } = null!;
+		public EventHandler<PointerEventArgs> PointerPressed { get; set; } = null!;
+		public EventHandler<PointerEventArgs> PointerReleased { get; set; } = null!;
+		public EventHandler Clicked { get; set; } = null!;
 	}
 
 	private static readonly List<WindowButtonState> _buttons = new();
@@ -337,6 +536,7 @@ public static class WindowChrome
 
 	private static void RepaintButtons()
 	{
+		AppLog.Info($"Шапка: перекраска при смене темы (тёмная={ThemeService.IsDark}, кнопок={_buttons.Count})");
 		foreach (var state in _buttons)
 			Paint(state);
 	}
@@ -499,8 +699,6 @@ public static class WindowChrome
 	{
 		try
 		{
-			// окно без системной шапки по умолчанию разворачивается на весь
-			// монитор; здесь разворот укладываем в рабочую область
 			if (message == WmGetMinMaxInfo && lParam != IntPtr.Zero)
 				ClampMaximizedBounds(hwnd, lParam);
 		}
@@ -529,13 +727,19 @@ public static class WindowChrome
 
 	private static void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
 	{
-		if (args.DidPresenterChange)
-			NotifyMaximized();
+		// Режим «на весь экран» заканчивается, только когда окно свернули.
+		// Изменения размеров и смену рамки игнорируем: их же шлёт наш
+		// собственный разворот, и режим сбрасывался сразу после включения.
+		if (!_fullScreen || Presenter()?.State != OverlappedPresenterState.Minimized)
+			return;
+
+		_fullScreen = false;
+		NotifyMaximized();
 	}
 
 	private static void NotifyMaximized() => _maximizedChanged?.Invoke(IsMaximized);
 
-	private static bool IsMaximized => Presenter()?.State == OverlappedPresenterState.Maximized;
+	private static bool IsMaximized => _fullScreen;
 
 	private static OverlappedPresenter? Presenter() => _appWindow?.Presenter as OverlappedPresenter;
 

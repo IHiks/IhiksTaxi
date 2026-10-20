@@ -168,11 +168,9 @@ public class OrderViewModel : ObservableObject
 		if (resolved is not null)
 			return resolved.FromPlaceIndex
 				? $"Найдено место: {resolved.DisplayName}"
-				: resolved.FromStreetFallback
-					? $"Найдена только улица: {resolved.DisplayName}. Точный дом не найден — координаты примерные."
-					: resolved.Exact
-						? $"Найден адрес: {resolved.DisplayName}"
-						: $"Найдена улица: {resolved.DisplayName} (без номера дома)";
+				: resolved.Exact
+					? $"Найден адрес: {resolved.DisplayName}"
+					: $"Найдена улица: {resolved.DisplayName} (без номера дома)";
 
 		return empty && query.Trim().Length > 0
 			? $"По запросу «{query.Trim()}» ничего не найдено."
